@@ -1,0 +1,24 @@
+{
+  "rewrites": [
+    {
+      "source": "/sitemap.xml",
+      "destination": "/sitemap.xml"
+    },
+    {
+      "source": "/sitemap-pages.xml",
+      "destination": "https://__SUPABASE_PROJECT_ID__.supabase.co/functions/v1/sitemap?type=pages"
+    },
+    {
+      "source": "/sitemap-domains.xml",
+      "destination": "https://__SUPABASE_PROJECT_ID__.supabase.co/functions/v1/sitemap?type=domains"
+    },
+    {
+      "source": "/api/sitemap",
+      "destination": "https://__SUPABASE_PROJECT_ID__.supabase.co/functions/v1/sitemap"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
+  ]
+}
