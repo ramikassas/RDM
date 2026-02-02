@@ -22,7 +22,7 @@ const PrivacyPage = () => {
     <>
       <SEO 
         title="Privacy Policy | Rare Domains Marketplace (RDM)" 
-        description="Understand how Rare Domains Marketplace (RDM) handles your data, privacy rights, and data protection practices."
+        description="Our privacy policy. Learn how we protect your data and personal information on our premium domain marketplace platform."
         keywords="privacy policy, data protection, RDM privacy, personal information, Rare Domains Marketplace"
         schema={privacySchema}
       />

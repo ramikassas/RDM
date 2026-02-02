@@ -1,3 +1,2 @@
-// DEPRECATED: Functionality moved to SitemapHandler.jsx
+// Unused utility
 export const generateSitemap = async () => null;
-export const downloadSitemap = async () => null;

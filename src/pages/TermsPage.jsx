@@ -22,7 +22,7 @@ const TermsPage = () => {
     <>
       <SEO 
         title="Terms of Service | Rare Domains Marketplace (RDM)" 
-        description="Review the official Terms of Service for Rare Domains Marketplace (RDM). Understand your rights and obligations when using our domain acquisition platform."
+        description="Read our terms of service. Understand the rules and conditions governing the use of our premium domain marketplace platform."
         keywords="terms of service, RDM terms, legal agreement, domain purchase terms, Rare Domains Marketplace"
         schema={termsSchema}
       />

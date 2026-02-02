@@ -25,3 +25,16 @@ body {
     -ms-overflow-style: none;  /* IE and Edge */
     scrollbar-width: none;  /* Firefox */
 }
+
+@keyframes pulse-glow {
+  0%, 100% { opacity: 1; box-shadow: 0 0 5px rgba(252, 211, 77, 0.5); }
+  50% { opacity: 0.8; box-shadow: 0 0 15px rgba(252, 211, 77, 0.8); }
+}
+
+.premium-badge-glow {
+  animation: pulse-glow 2.5s infinite ease-in-out;
+}
+
+.premium-badge-glow-fast {
+  animation: pulse-glow 2s infinite ease-in-out;
+}

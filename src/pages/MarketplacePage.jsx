@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import { Search, SlidersHorizontal, Grid, List, Filter, X, ChevronDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -170,7 +171,7 @@ const MarketplacePage = () => {
     <>
       <SEO 
         title="Premium Domain Marketplace | Buy & Sell Exclusive Digital Assets" 
-        description="Filter and find the perfect domain for your brand. Advanced search for premium, short, and brandable domains across all industries."
+        description="Browse premium domains for sale with advanced filters. Search by price, category, and TLD. Find valuable domain names for your business or investment."
         keywords="buy domains, domain filter, domain search, premium domains, short domains, brandable domains"
         canonicalUrl="https://rdm.bz/marketplace"
       />
@@ -287,34 +288,10 @@ const MarketplacePage = () => {
                     />
                   </div>
 
-                  {/* Accordion Filters */}
-                  <Accordion type="multiple" defaultValue={['category', 'tld']} className="w-full">
+                  {/* Accordion Filters - UPDATED ORDER: TLD FIRST, THEN CATEGORIES */}
+                  <Accordion type="multiple" defaultValue={['tld', 'category']} className="w-full">
                     
-                    <AccordionItem value="category">
-                      <AccordionTrigger className="text-sm font-bold text-slate-800 hover:no-underline">
-                        Categories
-                      </AccordionTrigger>
-                      <AccordionContent>
-                        <div className="space-y-2 pt-1">
-                          {uniqueCategories.map(cat => (
-                            <div key={cat} className="flex items-center space-x-2">
-                              <Checkbox 
-                                id={`cat-${cat}`} 
-                                checked={selectedCategories.includes(cat)}
-                                onCheckedChange={() => toggleCategory(cat)}
-                              />
-                              <label
-                                htmlFor={`cat-${cat}`}
-                                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 text-slate-600"
-                              >
-                                {cat}
-                              </label>
-                            </div>
-                          ))}
-                        </div>
-                      </AccordionContent>
-                    </AccordionItem>
-
+                    {/* TLDs Section - Moved before Categories */}
                     <AccordionItem value="tld">
                       <AccordionTrigger className="text-sm font-bold text-slate-800 hover:no-underline">
                         Extensions (TLD)
@@ -333,6 +310,32 @@ const MarketplacePage = () => {
                                 className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 text-slate-600 uppercase"
                               >
                                 .{tld}
+                              </label>
+                            </div>
+                          ))}
+                        </div>
+                      </AccordionContent>
+                    </AccordionItem>
+
+                    {/* Categories Section - Moved after TLDs */}
+                    <AccordionItem value="category">
+                      <AccordionTrigger className="text-sm font-bold text-slate-800 hover:no-underline">
+                        Categories
+                      </AccordionTrigger>
+                      <AccordionContent>
+                        <div className="space-y-2 pt-1">
+                          {uniqueCategories.map(cat => (
+                            <div key={cat} className="flex items-center space-x-2">
+                              <Checkbox 
+                                id={`cat-${cat}`} 
+                                checked={selectedCategories.includes(cat)}
+                                onCheckedChange={() => toggleCategory(cat)}
+                              />
+                              <label
+                                htmlFor={`cat-${cat}`}
+                                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 text-slate-600"
+                              >
+                                {cat}
                               </label>
                             </div>
                           ))}

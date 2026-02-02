@@ -1,2 +1,4 @@
-// DEPRECATED: Replaced by single SitemapHandler.jsx logic
-export default function SitemapRenderer() { return null; }
+// Unused file replaced by SitemapHandler.jsx
+import React from 'react';
+const SitemapRenderer = () => null;
+export default SitemapRenderer;

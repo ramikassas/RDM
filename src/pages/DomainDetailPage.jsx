@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
@@ -26,6 +25,7 @@ import MakeOfferForm from '@/components/MakeOfferForm';
 import SEO from '@/components/SEO';
 import Breadcrumbs from '@/components/Breadcrumbs';
 import WhoisModal from '@/components/WhoisModal';
+import PremiumBadge from '@/components/PremiumBadge';
 
 const DomainDetailPage = () => {
   const { domainName } = useParams();
@@ -172,6 +172,11 @@ const DomainDetailPage = () => {
     window.location.href = `${baseUrl}?${params.toString()}`;
   };
 
+  const handleGoDaddyBuy = () => {
+    if (window.gtag) window.gtag('event', 'click_godaddy_buy', { domain_name: domain.name });
+    window.open(`https://godaddy.com/forsale/${domain.name}`, '_blank', 'noopener,noreferrer');
+  };
+
   const handleMakeOffer = () => {
     if (window.gtag) window.gtag('event', 'click_make_offer', { domain_name: domain.name });
     setShowOfferForm(true);
@@ -295,7 +300,8 @@ const DomainDetailPage = () => {
                 <div className="flex flex-col lg:flex-row items-start justify-between gap-8 mb-12 pb-8 border-b border-slate-100">
                   <div className="flex-1">
                     <div className="flex items-center gap-3 mb-6 flex-wrap">
-                       <span className="px-3 py-1 bg-slate-100 text-slate-600 text-xs font-bold rounded-full uppercase tracking-wider">{domain.tld}</span>
+                      {domain.featured && <PremiumBadge variant="large" />}
+                      <span className="px-3 py-1 bg-slate-100 text-slate-600 text-xs font-bold rounded-full uppercase tracking-wider">{domain.tld}</span>
                       <span className="px-3 py-1 bg-blue-50 text-blue-600 text-xs font-bold rounded-full uppercase tracking-wider flex items-center gap-1"><Tag className="w-3 h-3" /> {domain.category}</span>
                       <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider flex items-center gap-1 ${
                         domain.status === 'available' ? 'bg-emerald-50 text-emerald-700 border border-emerald-100' :
@@ -304,9 +310,12 @@ const DomainDetailPage = () => {
                         <span className={`w-2 h-2 rounded-full ${domain.status === 'available' ? 'bg-emerald-500' : domain.status === 'sold' ? 'bg-red-500' : 'bg-amber-500'}`}></span>
                         {domain.status}
                       </span>
-                      {domain.featured && <span className="px-3 py-1 bg-amber-50 text-amber-700 text-xs font-bold rounded-full uppercase tracking-wider border border-amber-100 flex items-center gap-1"><TrendingUp className="w-3 h-3" /> Featured</span>}
                     </div>
-                    <h1 className="text-4xl sm:text-5xl md:text-7xl font-black text-slate-900 mb-4 tracking-tight break-words">{domain.name}</h1>
+                    
+                    <div className="flex flex-wrap items-center gap-4 mb-4">
+                      <h1 className="text-4xl sm:text-5xl md:text-7xl font-black text-slate-900 tracking-tight break-words">{domain.name}</h1>
+                    </div>
+                    
                     <p className="text-xl text-slate-500 font-medium max-w-2xl">{domain.tagline || `The perfect digital address for your next big venture in ${domain.category}.`}</p>
                   </div>
                   <div className="hidden lg:block text-right">
@@ -381,7 +390,19 @@ const DomainDetailPage = () => {
                           {isWeb3Domain ? (
                             <Button size="lg" onClick={handleWeb3Redirect} className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold h-16 text-lg shadow-lg shadow-blue-200/50 rounded-xl transition-transform active:scale-[0.98]"><Globe className="mr-2 h-5 w-5" /> View on Unstoppable</Button>
                           ) : (
-                            <Button size="lg" onClick={handleBuyNow} disabled={domain.status !== 'available'} className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold h-16 text-lg shadow-lg shadow-emerald-200/50 rounded-xl transition-transform active:scale-[0.98] flex flex-col items-center justify-center gap-0.5"><span className="flex items-center"><ShoppingCart className="mr-2 h-5 w-5" /> Buy Now</span><span className="text-[10px] font-normal opacity-80 uppercase tracking-wide">Instant Ownership Transfer</span></Button>
+                            <>
+                              <Button size="lg" onClick={handleBuyNow} disabled={domain.status !== 'available'} className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold h-16 text-lg shadow-lg shadow-emerald-200/50 rounded-xl transition-transform active:scale-[0.98] flex flex-col items-center justify-center gap-0.5"><span className="flex items-center"><ShoppingCart className="mr-2 h-5 w-5" /> Buy Now</span><span className="text-[10px] font-normal opacity-80 uppercase tracking-wide">Instant Ownership Transfer</span></Button>
+                              <Button 
+                                size="lg" 
+                                onClick={handleGoDaddyBuy}
+                                disabled={domain.status !== 'available'}
+                                className="w-full mt-3 bg-[#FFD700] hover:bg-[#E6C200] text-slate-900 font-bold h-14 text-lg shadow-lg shadow-yellow-200/50 rounded-xl transition-transform active:scale-[0.98] border border-yellow-400"
+                              >
+                                <span className="flex items-center">
+                                  Buy via GoDaddy <ExternalLink className="ml-2 h-5 w-5 opacity-80" />
+                                </span>
+                              </Button>
+                            </>
                           )}
                           <div className="relative py-2"><div className="absolute inset-0 flex items-center"><span className="w-full border-t border-slate-200" /></div><div className="relative flex justify-center text-xs uppercase"><span className="bg-white px-2 text-slate-400 font-medium">Or negotiate</span></div></div>
                           <Button size="lg" variant="outline" onClick={handleMakeOffer} disabled={domain.status !== 'available'} className="w-full h-14 border-2 border-slate-200 text-slate-700 font-bold hover:bg-slate-50 hover:border-slate-300 transition-all rounded-xl"><Send className="mr-2 h-5 w-5" /> Make an Offer</Button>

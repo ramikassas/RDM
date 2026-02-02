@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { Twitter, Linkedin, Mail } from 'lucide-react';
+import { Twitter, Instagram, Mail } from 'lucide-react'; // Corrected imports
 
 const Footer = () => {
   return (
@@ -46,13 +46,13 @@ const Footer = () => {
               <Mail className="h-4 w-4 mr-2" /> info@rdm.bz
             </a>
             <div className="flex space-x-4 mt-4">
-              <a href="https://twitter.com/rdm_bz" target="_blank" rel="noopener noreferrer" className="text-slate-400 hover:text-emerald-400 transition-colors">
+              <a href="https://twitter.com/rami_kassas" target="_blank" rel="noopener noreferrer" className="text-slate-400 hover:text-emerald-400 transition-colors">
                 <Twitter className="h-6 w-6" />
                 <span className="sr-only">Twitter</span>
               </a>
-              <a href="https://linkedin.com/company/rdm-bz" target="_blank" rel="noopener noreferrer" className="text-slate-400 hover:text-emerald-400 transition-colors">
-                <Linkedin className="h-6 w-6" />
-                <span className="sr-only">LinkedIn</span>
+              <a href="https://instagram.com/rami.kassas" target="_blank" rel="noopener noreferrer" className="text-slate-400 hover:text-emerald-400 transition-colors">
+                <Instagram className="h-6 w-6" /> {/* Corrected to Instagram icon */}
+                <span className="sr-only">Instagram</span> {/* Corrected capitalization */}
               </a>
             </div>
           </div>

@@ -7,16 +7,13 @@ import { Card, CardContent } from '@/components/ui/card';
 import { supabase } from '@/lib/customSupabaseClient';
 import DomainCard from '@/components/DomainCard';
 import SEO from '@/components/SEO';
-
 const HomePage = () => {
   const [featuredDomains, setFeaturedDomains] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
   const navigate = useNavigate();
-
   useEffect(() => {
     fetchFeaturedDomains();
   }, []);
-
   const fetchFeaturedDomains = async () => {
     const {
       data,
@@ -26,7 +23,6 @@ const HomePage = () => {
       setFeaturedDomains(data);
     }
   };
-
   const handleSearch = e => {
     e.preventDefault();
     const trimmedQuery = searchQuery.trim();
@@ -34,13 +30,13 @@ const HomePage = () => {
       navigate(`/marketplace?search=${encodeURIComponent(trimmedQuery)}`);
     }
   };
-
   const organizationSchema = {
     "@context": "https://schema.org",
     "@type": "Organization",
     "name": "Rare Domains Marketplace (RDM)",
     "url": "https://rdm.bz",
-    "logo": "https://rdm.bz/logo.png", // Assuming this will be the logo for schema
+    "logo": "https://rdm.bz/logo.png",
+    // Assuming this will be the logo for schema
     "founder": {
       "@type": "Person",
       "name": "Rami Kassas"
@@ -48,16 +44,9 @@ const HomePage = () => {
     "description": "Premium marketplace for rare and exclusive domain names.",
     "sameAs": ["https://twitter.com/rdm_bz", "https://linkedin.com/company/rdm-bz"]
   };
-
-  return (
-    <>
-      <SEO 
-        title="RDM - Rare Domains Marketplace (RDM) - Buy Rare & Premium Domains" 
-        description="The trusted marketplace for rare, premium, and exclusive domain names. Secure high-value digital real estate for your brand today." 
-        keywords="rare domains, premium domains, buy domains, domain marketplace, brandable domains, exclusive digital assets, Rare Domains Marketplace" 
-        ogImage="https://rdm.bz/og-image.png" // Added Open Graph image
-        schema={organizationSchema} 
-      />
+  return <>
+      <SEO title="RDM - Rare Domains Marketplace (RDM) - Buy Rare & Premium Domains" description="Discover premium domain names for sale. Browse our curated marketplace of high-value domains with investment potential. Find your perfect domain today." keywords="rare domains, premium domains, buy domains, domain marketplace, brandable domains, exclusive digital assets, Rare Domains Marketplace" ogImage="https://rdm.bz/og-image.png" // Added Open Graph image
+    schema={organizationSchema} />
 
       <div className="bg-slate-50 min-h-screen font-sans">
         
@@ -68,7 +57,15 @@ const HomePage = () => {
           
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24 md:py-32 relative z-10">
             <div className="max-w-4xl mx-auto text-center">
-              <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }}>
+              <motion.div initial={{
+              opacity: 0,
+              y: 20
+            }} animate={{
+              opacity: 1,
+              y: 0
+            }} transition={{
+              duration: 0.6
+            }}>
                 <span className="inline-block py-1 px-3 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-100 text-sm font-bold mb-6 tracking-wide">
                   RARE DOMAINS MARKETPLACE
                 </span>
@@ -146,8 +143,7 @@ const HomePage = () => {
         </section>
 
         {/* Featured Domains */}
-        {featuredDomains.length > 0 && (
-          <section className="py-24 bg-slate-50 border-t border-slate-200">
+        {featuredDomains.length > 0 && <section className="py-24 bg-slate-50 border-t border-slate-200">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
               <div className="flex justify-between items-end mb-12">
                 <div>
@@ -162,7 +158,7 @@ const HomePage = () => {
               </div>
               
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                {featuredDomains.map(domain => <DomainCard key={domain.id} domain={domain} />)}
+                {featuredDomains.map(domain => <DomainCard key={domain.id} domain={domain} viewMode='grid' />)}
               </div>
 
               <div className="mt-12 text-center md:hidden">
@@ -173,8 +169,7 @@ const HomePage = () => {
                 </Link>
               </div>
             </div>
-          </section>
-        )}
+          </section>}
 
         {/* Informational Section (SEO & Education) */}
         <section className="py-24 bg-white border-t border-slate-100">
@@ -197,11 +192,7 @@ const HomePage = () => {
                       <Globe className="w-6 h-6 text-emerald-600 mr-3" />
                       What is a Domain Name?
                     </h3>
-                    <p className="text-slate-600 mb-6 leading-relaxed">
-                      A domain name is your unique address on the internet—the digital entry point to your brand (e.g., yourbrand.com). 
-                      It serves as a user-friendly translation of the complex IP addresses that computers use to communicate. 
-                      However, in today's digital-first economy, it is far more than just a technical necessity; it is the cornerstone of your brand's identity.
-                    </p>
+                    <p className="text-slate-600 mb-6 leading-relaxed">A domain name is your unique address on the internet the digital entry point to your brand (e.g., yourbrand.com). It serves as a user friendly translation of the complex IP addresses that computers use to communicate. However, in today's digital first economy, it is far more than just a technical necessity; it is the cornerstone of your brand's identity.</p>
                     <h4 className="text-lg font-bold text-slate-900 mb-2">Why It Matters</h4>
                     <ul className="space-y-2 text-slate-600">
                       <li className="flex items-start"><CheckCircle className="w-5 h-5 text-emerald-500 mr-2 mt-0.5 shrink-0" /> <span><strong>First Impressions:</strong> It's often the first thing customers see.</span></li>
@@ -231,9 +222,7 @@ const HomePage = () => {
                       <Lightbulb className="w-6 h-6 text-amber-500 mr-3" />
                       Choosing the Right Extension
                     </h3>
-                    <p className="text-slate-600 max-w-3xl">
-                      While the part before the dot defines your brand, the Top-Level Domain (TLD)—the part after the dot—defines your neighborhood.
-                    </p>
+                    <p className="text-slate-600 max-w-3xl">While the part before the dot defines your brand, the Top Level Domain (TLD) the part after the dot defines your neighborhood.</p>
                   </div>
                   
                   <Card className="bg-white border-slate-200 shadow-sm hover:shadow-md transition-shadow">
@@ -277,9 +266,7 @@ const HomePage = () => {
                           <TrendingUp className="w-6 h-6 text-emerald-400 mr-3" />
                           SEO & Business Impact
                         </h3>
-                        <p className="text-slate-300 leading-relaxed mb-4">
-                          A premium domain doesn't just look good on a business card—it performs. High-quality domains are easier to link to, easier to remember, and often enjoy higher Click-Through Rates (CTR) in search engines.
-                        </p>
+                        <p className="text-slate-300 leading-relaxed mb-4">A premium domain doesn't just look good on a business card it performs. High quality domains are easier to link to, easier to remember, and often enjoy higher Click-Through Rates (CTR) in search engines.</p>
                         <p className="text-slate-300 leading-relaxed">
                           Search engines prioritize user experience. When users see a credible, clean domain name, they are more likely to click. This "type-in traffic" is free, recurring marketing for your business.
                         </p>
@@ -337,7 +324,6 @@ const HomePage = () => {
           </div>
         </section>
       </div>
-    </>
-  );
+    </>;
 };
 export default HomePage;

@@ -71,7 +71,7 @@ const ContactPage = () => {
     <>
       <SEO 
         title="Contact Us | Rare Domains Marketplace (RDM)" 
-        description="Get in touch with the team at Rare Domains Marketplace (RDM) for any questions about buying, selling, or general inquiries about premium domain names."
+        description="Get in touch with our team. Have questions about premium domains? Contact us for support, inquiries, or partnership opportunities."
         keywords="contact RDM, rare domains support, premium domain inquiry, RDM customer service"
         schema={contactSchema}
       />

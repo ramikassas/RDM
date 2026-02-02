@@ -1,8 +1,10 @@
+
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { ExternalLink, Tag, Gem } from 'lucide-react'; // Import Gem icon
+import { ExternalLink, Tag } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import PremiumBadge from '@/components/PremiumBadge';
 
 const DomainCard = ({ domain }) => {
   return (
@@ -15,17 +17,17 @@ const DomainCard = ({ domain }) => {
           <div className="flex-1 min-w-0">
             <h3 className="text-lg md:text-xl font-bold text-slate-900 mb-1 break-words leading-tight flex items-center">
               {domain.name}
-              {domain.featured && (
-                <Gem className="ml-2 h-4 w-4 text-emerald-500 fill-emerald-500" title="Featured Domain" />
-              )}
             </h3>
             {domain.tagline && (
               <p className="text-sm text-slate-500 line-clamp-1">{domain.tagline}</p>
             )}
           </div>
-          <span className="shrink-0 px-2.5 py-1 bg-slate-100 text-slate-600 text-xs font-bold rounded-md uppercase tracking-wide">
-            {domain.tld}
-          </span>
+          
+          <div className="flex items-center gap-2 shrink-0 flex-col-reverse sm:flex-row items-end sm:items-center">
+            {domain.featured && (
+              <PremiumBadge variant="small" />
+            )}
+          </div>
         </div>
 
         <div className="mb-5 flex-1">

@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Helmet } from 'react-helmet';
 import { useLocation } from 'react-router-dom';
@@ -11,7 +10,7 @@ const SEO = ({
   type = 'website', 
   schema, 
   breadcrumbSchema,
-  canonicalUrl // Allow explicit override
+  canonicalUrl 
 }) => {
   const location = useLocation();
   const baseUrl = 'https://rdm.bz'; 
@@ -47,11 +46,19 @@ const SEO = ({
 
   return (
     <Helmet>
-      {/* Standard Metadata */}
+      {/* HTML Attributes */}
       <html lang="en" />
+      
+      {/* Title */}
       <title>{fullTitle}</title>
+
+      {/* Meta Description - Explicitly rendered for SEO */}
       <meta name="description" content={finalDescription} />
+
+      {/* Keywords */}
       {keywords && <meta name="keywords" content={keywords} />}
+
+      {/* Canonical URL */}
       <link rel="canonical" href={derivedCanonicalUrl} />
 
       {/* Open Graph / Facebook */}

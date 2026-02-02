@@ -361,7 +361,7 @@ export async function getProducts({ids, offset, limit, order, sort_by, is_hidden
 	}
 
 	if (order) {
-		queryParams.append("order", String(order));
+		queryParams.append("order", String(order).toUpperCase());
 	}
 
 	if (sort_by) {

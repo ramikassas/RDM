@@ -23,7 +23,7 @@ const AboutPage = () => {
     <>
       <SEO 
         title="About Rare Domains Marketplace (RDM)" 
-        description="Discover Rare Domains Marketplace (RDM), the premier platform for rare and premium domain acquisition. Founded by Rami Kassas, we specialize in securing high-value digital assets for future-forward brands."
+        description="Learn about our premium domain marketplace. Discover our mission to connect buyers with valuable domain names and support digital entrepreneurship."
         schema={aboutSchema}
       />
 

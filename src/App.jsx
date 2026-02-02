@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from '@/components/ui/toaster';
@@ -77,7 +76,7 @@ function App() {
               <PublicLayout>
                 <CategoryPage 
                   title="Premium Domains for Sale"
-                  description="Browse available premium domains for purchase with one-time fees"
+                  description="Premium domains for sale. Browse our collection of valuable domain names available for immediate purchase or negotiation."
                   keywordsCluster={["premium domains for sale", "premium domain names for sale", "buy premium domain", "premium domain purchase", "premium com domains for sale"]}
                   fetchDomains={fetchAvailableDomains}
                 />
@@ -90,7 +89,7 @@ function App() {
               <PublicLayout>
                 <CategoryPage 
                   title="Premium Domain Marketplaces"
-                  description="Compare premium domain platforms: GoDaddy, Namecheap, Afternic, Sedo, Squadhelp"
+                  description="Explore domain marketplaces. Compare premium domain platforms and find the best place to buy and sell valuable domain names."
                   keywordsCluster={["godaddy premium domains", "namecheap premium domain", "afternic premium network", "sedo mls premium"]}
                   fetchDomains={fetchAvailableDomains}
                 />
@@ -103,7 +102,7 @@ function App() {
               <PublicLayout>
                 <CategoryPage 
                   title="Premium Domain Pricing & Costs"
-                  description="Understand premium domain prices, one-time fees and cost evaluation"
+                  description="Premium domain pricing guide. Understand domain valuation, pricing factors, and investment potential for premium domain names."
                   keywordsCluster={["premium domain price", "premium domain cost", "cheap premium domains", "premium domain renewal price"]}
                   fetchDomains={fetchAvailableDomains}
                 />
@@ -116,7 +115,7 @@ function App() {
               <PublicLayout>
                 <CategoryPage 
                   title="Find Premium Domains"
-                  description="Search and discover available premium domains with advanced filters"
+                  description="Find premium domains for your business. Search our extensive collection of high-value domain names available for purchase."
                   keywordsCluster={["premium domain search", "find premium domains", "search for premium domains", "available premium domains"]}
                   fetchDomains={fetchAvailableDomains}
                 />
@@ -129,7 +128,7 @@ function App() {
               <PublicLayout>
                 <CategoryPage 
                   title="Sell Premium Domains"
-                  description="List and sell your premium domains through our broker network"
+                  description="Sell your premium domain names. List your valuable domains on our marketplace and connect with serious buyers worldwide."
                   keywordsCluster={["sell premium domain", "sell premium domain names", "premium domain broker", "premium resale domain"]}
                   fetchDomains={fetchAvailableDomains}
                 />
@@ -142,7 +141,7 @@ function App() {
               <PublicLayout>
                 <CategoryPage 
                   title="Premium .COM Domains"
-                  description="Exclusive collection of premium .COM domain names for sale"
+                  description="Premium .COM domains for sale. Invest in valuable .COM domain names with strong branding potential and market demand."
                   keywordsCluster={["premium com domains", "premium com domain names", "buy premium com domains"]}
                   fetchDomains={fetchComDomains}
                 />

@@ -21,7 +21,6 @@ const AdminDomains = () => {
     name: '',
     price: '',
     status: 'available',
-    image_url: '',
     featured: false,
     registration_date: '',
     
@@ -69,7 +68,6 @@ const AdminDomains = () => {
         name: formData.name,
         price: parseFloat(formData.price) || 0,
         status: formData.status,
-        image_url: formData.image_url,
         featured: formData.featured,
         registration_date: formData.registration_date || null,
         category: formData.category,
@@ -121,7 +119,6 @@ const AdminDomains = () => {
         name: domain.name || '',
         price: domain.price || '',
         status: domain.status || 'available',
-        image_url: domain.image_url || '',
         featured: domain.featured || false,
         registration_date: domain.registration_date ? domain.registration_date.split('T')[0] : '',
         
@@ -137,7 +134,7 @@ const AdminDomains = () => {
     } else {
       setEditingId(null);
       setFormData({
-        name: '', price: '', status: 'available', image_url: '', featured: false, registration_date: '',
+        name: '', price: '', status: 'available', featured: false, registration_date: '',
         category: '', tagline: '', description: '', market_rationale: '',
         use_cases: '', usp_points: '', similar_domains: ''
       });
@@ -415,10 +412,6 @@ const AdminDomains = () => {
                       onChange={e => setFormData({...formData, market_rationale: e.target.value})} 
                       placeholder="Why is this domain valuable? Market trends, branding potential, etc."
                     />
-                  </div>
-                  <div className="col-span-2">
-                    <label className="text-xs font-bold text-slate-500 mb-1 block">Image URL</label>
-                    <Input value={formData.image_url} onChange={e => setFormData({...formData, image_url: e.target.value})} placeholder="https://..." />
                   </div>
                 </div>
               </section>
