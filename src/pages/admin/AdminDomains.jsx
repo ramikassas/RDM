@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { useToast } from '@/components/ui/use-toast';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import SEO from '@/components/SEO';
+import { formatDateOnly } from '@/utils/formatDate';
 
 const AdminDomains = () => {
   const [domains, setDomains] = useState([]);
@@ -295,7 +296,10 @@ const AdminDomains = () => {
                 filteredDomains.length === 0 ? <tr><td colSpan="6" className="p-8 text-center">No domains found.</td></tr> :
                 filteredDomains.map(domain => (
                   <tr key={domain.id} className="hover:bg-slate-50">
-                    <td className="px-6 py-4 font-medium text-slate-900">{domain.name}</td>
+                    <td className="px-6 py-4 font-medium text-slate-900">
+                      {domain.name}
+                      <div className="text-xs text-slate-400 mt-0.5">Created: {formatDateOnly(domain.created_at)}</div>
+                    </td>
                     <td className="px-6 py-4 text-slate-600">{domain.category || '-'}</td>
                     <td className="px-6 py-4 font-bold text-emerald-600">${Number(domain.price).toLocaleString()}</td>
                     <td className="px-6 py-4">

@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
@@ -6,14 +7,19 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { supabase } from '@/lib/customSupabaseClient';
 import DomainCard from '@/components/DomainCard';
-import SEO from '@/components/SEO';
+import SEOHead from '@/components/SEOHead';
+import { usePageSEO } from '@/hooks/usePageSEO';
+
 const HomePage = () => {
   const [featuredDomains, setFeaturedDomains] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
   const navigate = useNavigate();
+  const { seoData, loading: seoLoading } = usePageSEO('home');
+
   useEffect(() => {
     fetchFeaturedDomains();
   }, []);
+
   const fetchFeaturedDomains = async () => {
     const {
       data,
@@ -23,6 +29,7 @@ const HomePage = () => {
       setFeaturedDomains(data);
     }
   };
+
   const handleSearch = e => {
     e.preventDefault();
     const trimmedQuery = searchQuery.trim();
@@ -30,13 +37,13 @@ const HomePage = () => {
       navigate(`/marketplace?search=${encodeURIComponent(trimmedQuery)}`);
     }
   };
+
   const organizationSchema = {
     "@context": "https://schema.org",
     "@type": "Organization",
     "name": "Rare Domains Marketplace (RDM)",
     "url": "https://rdm.bz",
     "logo": "https://rdm.bz/logo.png",
-    // Assuming this will be the logo for schema
     "founder": {
       "@type": "Person",
       "name": "Rami Kassas"
@@ -44,9 +51,19 @@ const HomePage = () => {
     "description": "Premium marketplace for rare and exclusive domain names.",
     "sameAs": ["https://twitter.com/rdm_bz", "https://linkedin.com/company/rdm-bz"]
   };
-  return <>
-      <SEO title="RDM - Rare Domains Marketplace (RDM) - Buy Rare & Premium Domains" description="Discover premium domain names for sale. Browse our curated marketplace of high-value domains with investment potential. Find your perfect domain today." keywords="rare domains, premium domains, buy domains, domain marketplace, brandable domains, exclusive digital assets, Rare Domains Marketplace" ogImage="https://rdm.bz/og-image.png" // Added Open Graph image
-    schema={organizationSchema} />
+
+  const heroTitle = seoData?.h1_title || "Own the Perfect Domain";
+  const heroSubtitle = seoData?.page_heading || "Secure exclusive, high-value digital real estate that defines authority. Build your legacy on a foundation of rarity.";
+
+  return (
+    <>
+      <SEOHead 
+        seoData={seoData}
+        defaultTitle="RDM - Rare Domains Marketplace (RDM) - Buy Rare & Premium Domains" 
+        defaultDescription="Discover premium domain names for sale. Browse our curated marketplace of high-value domains with investment potential. Find your perfect domain today." 
+        defaultKeywords="rare domains, premium domains, buy domains, domain marketplace, brandable domains, exclusive digital assets, Rare Domains Marketplace"
+        schema={organizationSchema} 
+      />
 
       <div className="bg-slate-50 min-h-screen font-sans">
         
@@ -58,22 +75,28 @@ const HomePage = () => {
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24 md:py-32 relative z-10">
             <div className="max-w-4xl mx-auto text-center">
               <motion.div initial={{
-              opacity: 0,
-              y: 20
-            }} animate={{
-              opacity: 1,
-              y: 0
-            }} transition={{
-              duration: 0.6
-            }}>
+                opacity: 0,
+                y: 20
+              }} animate={{
+                opacity: 1,
+                y: 0
+              }} transition={{
+                duration: 0.6
+              }}>
                 <span className="inline-block py-1 px-3 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-100 text-sm font-bold mb-6 tracking-wide">
                   RARE DOMAINS MARKETPLACE
                 </span>
+                
                 <h1 className="text-5xl md:text-7xl font-black text-slate-900 mb-6 leading-tight tracking-tight">
-                  Own the <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-600 to-teal-500">Perfect Domain</span>
+                  {heroTitle.includes("Perfect Domain") ? (
+                    <>Own the <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-600 to-teal-500">Perfect Domain</span></>
+                  ) : (
+                    heroTitle
+                  )}
                 </h1>
+                
                 <p className="text-xl md:text-2xl text-slate-600 mb-10 max-w-2xl mx-auto leading-relaxed">
-                  Secure exclusive, high-value digital real estate that defines authority. Build your legacy on a foundation of rarity.
+                  {heroSubtitle}
                 </p>
 
                 {/* Search Form */}
@@ -324,6 +347,7 @@ const HomePage = () => {
           </div>
         </section>
       </div>
-    </>;
+    </>
+  );
 };
 export default HomePage;

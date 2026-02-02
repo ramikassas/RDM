@@ -1,7 +1,9 @@
+
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from '@/components/ui/toaster';
 import { AuthProvider } from '@/contexts/SupabaseAuthContext';
+import { CartProvider } from '@/hooks/useCart';
 import ProtectedRoute from '@/components/ProtectedRoute'; 
 import { supabase } from '@/lib/customSupabaseClient';
 
@@ -33,6 +35,8 @@ import AdminSales from '@/pages/admin/AdminSales';
 import AdminMessages from '@/pages/admin/AdminMessages';
 import AdminTransfers from '@/pages/admin/AdminTransfers';
 import AdminSettings from '@/pages/admin/AdminSettings';
+import AdminPages from '@/pages/admin/AdminPages';
+import DataMigration from '@/pages/admin/DataMigration';
 
 // Wrapper for Public Layout
 const PublicLayout = ({ children }) => (
@@ -53,123 +57,133 @@ const fetchComDomains = () =>
 function App() {
   return (
     <AuthProvider>
-      <Router>
-        <ScrollToTop />
-        <Routes>
-          {/* SITEMAP GENERATION - Single route serving pure XML via DOM replacement */}
-          <Route path="/sitemap.xml" element={<SitemapHandler />} />
+      <CartProvider>
+        <Router>
+          <ScrollToTop />
+          <Routes>
+            {/* SITEMAP GENERATION - Single route serving pure XML via DOM replacement */}
+            <Route path="/sitemap.xml" element={<SitemapHandler />} />
 
-          {/* Public Routes */}
-          <Route path="/" element={<PublicLayout><HomePage /></PublicLayout>} />
-          <Route path="/marketplace" element={<PublicLayout><MarketplacePage /></PublicLayout>} />
-          <Route path="/domain/:domainName" element={<PublicLayout><DomainDetailPage /></PublicLayout>} />
-          <Route path="/about" element={<PublicLayout><AboutPage /></PublicLayout>} />
-          <Route path="/contact" element={<PublicLayout><ContactPage /></PublicLayout>} />
-          <Route path="/terms" element={<PublicLayout><TermsPage /></PublicLayout>} />
-          <Route path="/privacy" element={<PublicLayout><PrivacyPage /></PublicLayout>} />
-          <Route path="/transfer" element={<PublicLayout><TransferPage /></PublicLayout>} />
-          
-          {/* Category SEO Pages */}
-          <Route 
-            path="/premium-domains-for-sale" 
-            element={
-              <PublicLayout>
-                <CategoryPage 
-                  title="Premium Domains for Sale"
-                  description="Premium domains for sale. Browse our collection of valuable domain names available for immediate purchase or negotiation."
-                  keywordsCluster={["premium domains for sale", "premium domain names for sale", "buy premium domain", "premium domain purchase", "premium com domains for sale"]}
-                  fetchDomains={fetchAvailableDomains}
-                />
-              </PublicLayout>
-            } 
-          />
-          <Route 
-            path="/marketplaces" 
-            element={
-              <PublicLayout>
-                <CategoryPage 
-                  title="Premium Domain Marketplaces"
-                  description="Explore domain marketplaces. Compare premium domain platforms and find the best place to buy and sell valuable domain names."
-                  keywordsCluster={["godaddy premium domains", "namecheap premium domain", "afternic premium network", "sedo mls premium"]}
-                  fetchDomains={fetchAvailableDomains}
-                />
-              </PublicLayout>
-            } 
-          />
-          <Route 
-            path="/premium-domain-pricing" 
-            element={
-              <PublicLayout>
-                <CategoryPage 
-                  title="Premium Domain Pricing & Costs"
-                  description="Premium domain pricing guide. Understand domain valuation, pricing factors, and investment potential for premium domain names."
-                  keywordsCluster={["premium domain price", "premium domain cost", "cheap premium domains", "premium domain renewal price"]}
-                  fetchDomains={fetchAvailableDomains}
-                />
-              </PublicLayout>
-            } 
-          />
-          <Route 
-            path="/find-premium-domains" 
-            element={
-              <PublicLayout>
-                <CategoryPage 
-                  title="Find Premium Domains"
-                  description="Find premium domains for your business. Search our extensive collection of high-value domain names available for purchase."
-                  keywordsCluster={["premium domain search", "find premium domains", "search for premium domains", "available premium domains"]}
-                  fetchDomains={fetchAvailableDomains}
-                />
-              </PublicLayout>
-            } 
-          />
-          <Route 
-            path="/sell-premium-domains" 
-            element={
-              <PublicLayout>
-                <CategoryPage 
-                  title="Sell Premium Domains"
-                  description="Sell your premium domain names. List your valuable domains on our marketplace and connect with serious buyers worldwide."
-                  keywordsCluster={["sell premium domain", "sell premium domain names", "premium domain broker", "premium resale domain"]}
-                  fetchDomains={fetchAvailableDomains}
-                />
-              </PublicLayout>
-            } 
-          />
-          <Route 
-            path="/premium-com-domains" 
-            element={
-              <PublicLayout>
-                <CategoryPage 
-                  title="Premium .COM Domains"
-                  description="Premium .COM domains for sale. Invest in valuable .COM domain names with strong branding potential and market demand."
-                  keywordsCluster={["premium com domains", "premium com domain names", "buy premium com domains"]}
-                  fetchDomains={fetchComDomains}
-                />
-              </PublicLayout>
-            } 
-          />
+            {/* Public Routes */}
+            <Route path="/" element={<PublicLayout><HomePage /></PublicLayout>} />
+            <Route path="/marketplace" element={<PublicLayout><MarketplacePage /></PublicLayout>} />
+            <Route path="/domain/:domainName" element={<PublicLayout><DomainDetailPage /></PublicLayout>} />
+            <Route path="/about" element={<PublicLayout><AboutPage /></PublicLayout>} />
+            <Route path="/contact" element={<PublicLayout><ContactPage /></PublicLayout>} />
+            <Route path="/terms" element={<PublicLayout><TermsPage /></PublicLayout>} />
+            <Route path="/privacy" element={<PublicLayout><PrivacyPage /></PublicLayout>} />
+            <Route path="/transfer" element={<PublicLayout><TransferPage /></PublicLayout>} />
+            
+            {/* Category SEO Pages */}
+            <Route 
+              path="/premium-domains-for-sale" 
+              element={
+                <PublicLayout>
+                  <CategoryPage 
+                    slug="premium-domains-for-sale"
+                    defaultTitle="Premium Domains for Sale"
+                    defaultDescription="Premium domains for sale. Browse our collection of valuable domain names available for immediate purchase or negotiation."
+                    keywordsCluster={["premium domains for sale", "premium domain names for sale", "buy premium domain", "premium domain purchase", "premium com domains for sale"]}
+                    fetchDomains={fetchAvailableDomains}
+                  />
+                </PublicLayout>
+              } 
+            />
+            <Route 
+              path="/marketplaces" 
+              element={
+                <PublicLayout>
+                  <CategoryPage 
+                    slug="marketplaces"
+                    defaultTitle="Premium Domain Marketplaces"
+                    defaultDescription="Explore domain marketplaces. Compare premium domain platforms and find the best place to buy and sell valuable domain names."
+                    keywordsCluster={["godaddy premium domains", "namecheap premium domain", "afternic premium network", "sedo mls premium"]}
+                    fetchDomains={fetchAvailableDomains}
+                  />
+                </PublicLayout>
+              } 
+            />
+            <Route 
+              path="/premium-domain-pricing" 
+              element={
+                <PublicLayout>
+                  <CategoryPage 
+                    slug="premium-domain-pricing"
+                    defaultTitle="Premium Domain Pricing & Costs"
+                    defaultDescription="Premium domain pricing guide. Understand domain valuation, pricing factors, and investment potential for premium domain names."
+                    keywordsCluster={["premium domain price", "premium domain cost", "cheap premium domains", "premium domain renewal price"]}
+                    fetchDomains={fetchAvailableDomains}
+                  />
+                </PublicLayout>
+              } 
+            />
+            <Route 
+              path="/find-premium-domains" 
+              element={
+                <PublicLayout>
+                  <CategoryPage 
+                    slug="find-premium-domains"
+                    defaultTitle="Find Premium Domains"
+                    defaultDescription="Find premium domains for your business. Search our extensive collection of high-value domain names available for purchase."
+                    keywordsCluster={["premium domain search", "find premium domains", "search for premium domains", "available premium domains"]}
+                    fetchDomains={fetchAvailableDomains}
+                  />
+                </PublicLayout>
+              } 
+            />
+            <Route 
+              path="/sell-premium-domains" 
+              element={
+                <PublicLayout>
+                  <CategoryPage 
+                    slug="sell-premium-domains"
+                    defaultTitle="Sell Premium Domains"
+                    defaultDescription="Sell your premium domain names. List your valuable domains on our marketplace and connect with serious buyers worldwide."
+                    keywordsCluster={["sell premium domain", "sell premium domain names", "premium domain broker", "premium resale domain"]}
+                    fetchDomains={fetchAvailableDomains}
+                  />
+                </PublicLayout>
+              } 
+            />
+            <Route 
+              path="/premium-com-domains" 
+              element={
+                <PublicLayout>
+                  <CategoryPage 
+                    slug="premium-com-domains"
+                    defaultTitle="Premium .COM Domains"
+                    defaultDescription="Premium .COM domains for sale. Invest in valuable .COM domain names with strong branding potential and market demand."
+                    keywordsCluster={["premium com domains", "premium com domain names", "buy premium com domains"]}
+                    fetchDomains={fetchComDomains}
+                  />
+                </PublicLayout>
+              } 
+            />
 
-          {/* Admin Routes */}
-          <Route path="/admin" element={<ProtectedRoute><AdminLayout /></ProtectedRoute>}>
-            <Route index element={<DashboardHome />} />
-            <Route path="domains" element={<AdminDomains />} />
-            <Route path="offers" element={<AdminOffers />} />
-            <Route path="orders" element={<AdminOrders />} />
-            <Route path="sales" element={<AdminSales />} />
-            <Route path="messages" element={<AdminMessages />} />
-            <Route path="transfers" element={<AdminTransfers />} />
-            <Route path="settings" element={<AdminSettings />} />
-          </Route>
+            {/* Admin Routes */}
+            <Route path="/admin" element={<ProtectedRoute><AdminLayout /></ProtectedRoute>}>
+              <Route index element={<DashboardHome />} />
+              <Route path="domains" element={<AdminDomains />} />
+              <Route path="offers" element={<AdminOffers />} />
+              <Route path="orders" element={<AdminOrders />} />
+              <Route path="sales" element={<AdminSales />} />
+              <Route path="messages" element={<AdminMessages />} />
+              <Route path="transfers" element={<AdminTransfers />} />
+              <Route path="pages" element={<AdminPages />} />
+              <Route path="settings" element={<AdminSettings />} />
+              <Route path="migrate" element={<DataMigration />} />
+            </Route>
 
-          {/* Legacy Admin Redirects */}
-          <Route path="/0955" element={<Navigate to="/admin" replace />} />
-          <Route path="/leads" element={<Navigate to="/admin/offers" replace />} />
+            {/* Legacy Admin Redirects */}
+            <Route path="/0955" element={<Navigate to="/admin" replace />} />
+            <Route path="/leads" element={<Navigate to="/admin/offers" replace />} />
 
-          {/* Fallback */}
-          <Route path="*" element={<PublicLayout><NotFoundPage /></PublicLayout>} />
-        </Routes>
-        <Toaster />
-      </Router>
+            {/* Fallback */}
+            <Route path="*" element={<PublicLayout><NotFoundPage /></PublicLayout>} />
+          </Routes>
+          <Toaster />
+        </Router>
+      </CartProvider>
     </AuthProvider>
   );
 }

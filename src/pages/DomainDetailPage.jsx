@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
@@ -26,6 +27,7 @@ import SEO from '@/components/SEO';
 import Breadcrumbs from '@/components/Breadcrumbs';
 import WhoisModal from '@/components/WhoisModal';
 import PremiumBadge from '@/components/PremiumBadge';
+import { formatDateOnly } from '@/utils/formatDate';
 
 const DomainDetailPage = () => {
   const { domainName } = useParams();

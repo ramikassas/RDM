@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import { supabase } from '@/lib/customSupabaseClient';
 import { Plus, Eye, Trash2, ShoppingCart, DollarSign, User, Calendar, FileText, Check, X, ArrowLeft, Clock, Search, Mail } from 'lucide-react';
@@ -6,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { useToast } from '@/components/ui/use-toast';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import SEO from '@/components/SEO';
+import { formatDate } from '@/utils/formatDate';
 
 const AdminOrders = () => {
   const [orders, setOrders] = useState([]);
@@ -198,7 +200,7 @@ const AdminOrders = () => {
                         <td className="px-6 py-3 whitespace-nowrap">
                           <div className="flex items-center gap-2 text-sm text-slate-600">
                             <Clock className="h-3.5 w-3.5 text-slate-400" />
-                            {new Date(order.created_at).toLocaleDateString()}
+                            {formatDate(order.created_at)}
                           </div>
                         </td>
                         <td className="px-6 py-3 text-right">
@@ -334,7 +336,7 @@ const AdminOrders = () => {
                           <label className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">Date Created</label>
                           <div className="text-base font-bold text-slate-900 flex items-center gap-2">
                              <Calendar className="w-4 h-4 text-slate-400" />
-                             {new Date(selectedOrder.created_at).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' })}
+                             {formatDate(selectedOrder.created_at)}
                           </div>
                        </div>
                     </div>

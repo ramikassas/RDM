@@ -1,14 +1,25 @@
+
 import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { RefreshCw, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import SEO from '@/components/SEO';
+import SEOHead from '@/components/SEOHead';
 import DomainCard from '@/components/DomainCard';
+import { usePageSEO } from '@/hooks/usePageSEO';
 
-const CategoryPage = ({ title, description, keywordsCluster, fetchDomains }) => {
+const CategoryPage = ({ 
+  slug, // The unique slug for looking up SEO data (e.g., 'premium-domains-for-sale')
+  defaultTitle, 
+  defaultDescription, 
+  keywordsCluster, 
+  fetchDomains 
+}) => {
   const [domains, setDomains] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  
+  // Fetch SEO data based on the unique slug provided for this category route
+  const { seoData } = usePageSEO(slug);
 
   const loadDomains = async () => {
     setLoading(true);
@@ -29,14 +40,18 @@ const CategoryPage = ({ title, description, keywordsCluster, fetchDomains }) => 
 
   useEffect(() => {
     loadDomains();
-  }, [title]); // Reload when category changes
+  }, [slug]); // Reload when category slug changes
+
+  const pageTitle = seoData?.h1_title || defaultTitle;
+  const pageHeading = seoData?.page_heading || defaultDescription;
 
   return (
     <>
-      <SEO 
-        title={title}
-        description={description}
-        keywords={keywordsCluster?.join(', ')}
+      <SEOHead 
+        seoData={seoData}
+        defaultTitle={defaultTitle}
+        defaultDescription={defaultDescription}
+        defaultKeywords={keywordsCluster?.join(', ')}
       />
 
       <div className="min-h-screen bg-slate-50 font-sans">
@@ -48,10 +63,10 @@ const CategoryPage = ({ title, description, keywordsCluster, fetchDomains }) => 
             className="mb-10 text-center max-w-3xl mx-auto"
           >
             <h1 className="text-3xl md:text-5xl font-black text-slate-900 mb-4 tracking-tight">
-              {title}
+              {pageTitle}
             </h1>
             <p className="text-lg text-slate-600 leading-relaxed">
-              {description}
+              {pageHeading}
             </p>
           </motion.div>
 

@@ -1,8 +1,10 @@
+
 import React, { useEffect, useState } from 'react';
 import { supabase } from '@/lib/customSupabaseClient';
 import { Globe, Inbox, ShoppingCart, DollarSign, ArrowUpRight, Clock } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Link } from 'react-router-dom';
+import { formatDate } from '@/utils/formatDate';
 
 const DashboardHome = () => {
   const [stats, setStats] = useState({
@@ -111,7 +113,7 @@ const DashboardHome = () => {
                           <div className="text-xs text-slate-400">{offer.email}</div>
                         </td>
                         <td className="px-6 py-4 font-bold text-emerald-600">${Number(offer.offer_amount).toLocaleString()}</td>
-                        <td className="px-6 py-4 text-slate-500">{new Date(offer.created_at).toLocaleDateString()}</td>
+                        <td className="px-6 py-4 text-slate-500">{formatDate(offer.created_at)}</td>
                       </tr>
                     ))
                   )}

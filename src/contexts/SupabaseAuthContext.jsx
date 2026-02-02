@@ -1,5 +1,5 @@
-import React, { createContext, useContext, useEffect, useState, useCallback, useMemo } from 'react';
 
+import React, { createContext, useContext, useEffect, useState, useCallback, useMemo } from 'react';
 import { supabase } from '@/lib/customSupabaseClient';
 import { useToast } from '@/components/ui/use-toast';
 
@@ -7,7 +7,6 @@ export const AuthContext = createContext(undefined);
 
 export const AuthProvider = ({ children }) => {
   const { toast } = useToast();
-
   const [user, setUser] = useState(null);
   const [session, setSession] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -19,7 +18,6 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   useEffect(() => {
-    // Get initial session
     const getSession = async () => {
       try {
         const { data: { session } } = await supabase.auth.getSession();
@@ -32,10 +30,8 @@ export const AuthProvider = ({ children }) => {
 
     getSession();
 
-    // Listen for changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        // Handle signed out event explicitly to double-ensure state clearing
         if (event === 'SIGNED_OUT') {
           setUser(null);
           setSession(null);
@@ -86,26 +82,18 @@ export const AuthProvider = ({ children }) => {
 
   const signOut = useCallback(async () => {
     try {
-      // 1. CRITICAL FIX: Explicitly clear local state FIRST.
-      // This ensures the UI updates immediately to "logged out" even if the 
-      // server request fails because the session token is already invalid.
       setUser(null);
       setSession(null);
       
-      // 2. Attempt Supabase sign out
       const { error } = await supabase.auth.signOut();
 
-      // 3. Handle specific "Session not found" errors gracefully
       if (error) {
-        // If the session doesn't exist on server, we are effectively logged out anyway.
-        // We only log this as a warning, not an error that stops the flow.
         console.warn("Supabase signOut notice:", error.message);
       }
       
-      return { error: null }; // Return success to consumers since we are locally logged out
+      return { error: null };
     } catch (err) {
       console.error("Unexpected error during sign out:", err);
-      // Ensure we are logged out locally even on crash
       setUser(null);
       setSession(null);
       return { error: null };

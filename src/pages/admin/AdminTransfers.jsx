@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import { supabase } from '@/lib/customSupabaseClient';
 import { ExternalLink, Trash2, CheckCircle, XCircle, AlertCircle, Eye } from 'lucide-react';
@@ -5,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/use-toast';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import SEO from '@/components/SEO';
+import { formatDate } from '@/utils/formatDate';
 
 const AdminTransfers = () => {
   const [requests, setRequests] = useState([]);
@@ -122,7 +124,7 @@ const AdminTransfers = () => {
                   requests.map(req => (
                     <tr key={req.id} className="hover:bg-slate-50">
                       <td className="px-6 py-4 text-slate-500 whitespace-nowrap">
-                        {new Date(req.created_at).toLocaleDateString()}
+                        {formatDate(req.created_at)}
                       </td>
                       <td className="px-6 py-4 font-bold text-slate-900">
                         {req.domain_name}
@@ -185,7 +187,7 @@ const AdminTransfers = () => {
                </div>
                <div>
                  <label className="block text-xs font-bold text-slate-500 uppercase">Submission Date</label>
-                 <p className="text-slate-900">{selectedRequest && new Date(selectedRequest.created_at).toLocaleString()}</p>
+                 <p className="text-slate-900">{selectedRequest && formatDate(selectedRequest.created_at)}</p>
                </div>
             </div>
             

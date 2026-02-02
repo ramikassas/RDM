@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import { supabase } from '@/lib/customSupabaseClient';
 import { ShoppingCart, Mail, Calendar, Eye, Phone, FileText, User, DollarSign, Globe, Hash, Check, X, ArrowLeft } from 'lucide-react';
@@ -5,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/use-toast';
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import SEO from '@/components/SEO';
+import { formatDate } from '@/utils/formatDate';
 
 const AdminOffers = () => {
   const [offers, setOffers] = useState([]);
@@ -191,7 +193,7 @@ const AdminOffers = () => {
                           <label className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">Submission Date</label>
                           <div className="text-base font-bold text-slate-900 flex items-center gap-2">
                              <Calendar className="w-4 h-4 text-slate-400" />
-                             {new Date(selectedOffer.created_at).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' })}
+                             {formatDate(selectedOffer.created_at)}
                           </div>
                        </div>
                     </div>

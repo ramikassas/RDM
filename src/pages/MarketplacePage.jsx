@@ -4,7 +4,8 @@ import { Search, SlidersHorizontal, Grid, List, Filter, X, ChevronDown } from 'l
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/lib/customSupabaseClient';
 import DomainCard from '@/components/DomainCard';
-import SEO from '@/components/SEO';
+import SEOHead from '@/components/SEOHead';
+import { usePageSEO } from '@/hooks/usePageSEO';
 import Breadcrumbs from '@/components/Breadcrumbs';
 import { motion } from 'framer-motion';
 import { useSearchParams } from 'react-router-dom';
@@ -23,6 +24,7 @@ const MarketplacePage = () => {
   const [domains, setDomains] = useState([]);
   const [filteredDomains, setFilteredDomains] = useState([]);
   const [loading, setLoading] = useState(true);
+  const { seoData } = usePageSEO('marketplace');
   
   // Filters State
   const [searchQuery, setSearchQuery] = useState('');
@@ -167,12 +169,16 @@ const MarketplacePage = () => {
     setSortBy('newest');
   };
 
+  const pageTitle = seoData?.h1_title || "Marketplace";
+  const pageHeading = seoData?.page_heading || `Found ${filteredDomains.length} premium assets matching your criteria`;
+
   return (
     <>
-      <SEO 
-        title="Premium Domain Marketplace | Buy & Sell Exclusive Digital Assets" 
-        description="Browse premium domains for sale with advanced filters. Search by price, category, and TLD. Find valuable domain names for your business or investment."
-        keywords="buy domains, domain filter, domain search, premium domains, short domains, brandable domains"
+      <SEOHead 
+        seoData={seoData}
+        defaultTitle="Premium Domain Marketplace | Buy & Sell Exclusive Digital Assets" 
+        defaultDescription="Browse premium domains for sale with advanced filters. Search by price, category, and TLD. Find valuable domain names for your business or investment."
+        defaultKeywords="buy domains, domain filter, domain search, premium domains, short domains, brandable domains"
         canonicalUrl="https://rdm.bz/marketplace"
       />
 
@@ -182,9 +188,9 @@ const MarketplacePage = () => {
           
           <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-8">
             <div>
-              <h1 className="text-4xl font-black text-slate-900 mb-2">Marketplace</h1>
+              <h1 className="text-4xl font-black text-slate-900 mb-2">{pageTitle}</h1>
               <p className="text-lg text-slate-600">
-                Found {filteredDomains.length} premium assets matching your criteria
+                {pageHeading}
               </p>
             </div>
             

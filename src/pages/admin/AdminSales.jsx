@@ -1,8 +1,10 @@
+
 import React, { useEffect, useState } from 'react';
 import { supabase } from '@/lib/customSupabaseClient';
 import { DollarSign, CheckCircle } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import SEO from '@/components/SEO';
+import { formatDate } from '@/utils/formatDate';
 
 const AdminSales = () => {
   const [sales, setSales] = useState([]);
@@ -55,7 +57,7 @@ const AdminSales = () => {
                  sales.map(sale => (
                   <tr key={sale.id} className="hover:bg-slate-50">
                      <td className="px-6 py-4 text-slate-500">
-                       {new Date(sale.updated_at).toLocaleDateString()}
+                       {formatDate(sale.updated_at)}
                      </td>
                      <td className="px-6 py-4 font-bold text-slate-900">
                        {sale.domains?.name || 'Unknown'}

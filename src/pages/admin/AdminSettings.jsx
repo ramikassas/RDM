@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import { supabase } from '@/lib/customSupabaseClient';
 import { Save, Loader2 } from 'lucide-react';
@@ -5,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/components/ui/use-toast';
 import SEO from '@/components/SEO';
+import { formatDate } from '@/utils/formatDate';
 
 const AdminSettings = () => {
   const [settings, setSettings] = useState({
@@ -81,8 +83,12 @@ const AdminSettings = () => {
               placeholder="+1 (555) 000-0000"
             />
           </div>
+          
+          <div className="text-xs text-slate-400 pt-2 border-t border-slate-100 mt-2">
+            Last Updated: {formatDate(settings.updated_at)}
+          </div>
 
-          <div className="pt-4 border-t border-slate-100">
+          <div className="pt-4">
             <Button onClick={handleSave} disabled={saving} className="bg-emerald-600 hover:bg-emerald-700 text-white">
               {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
               Save Changes

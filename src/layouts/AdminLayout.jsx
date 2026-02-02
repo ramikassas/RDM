@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Link, useLocation, Outlet, useNavigate } from 'react-router-dom';
 import { 
@@ -11,7 +12,8 @@ import {
   X,
   LogOut,
   MessageSquare,
-  ArrowLeftRight
+  ArrowLeftRight,
+  FileText
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/SupabaseAuthContext';
@@ -33,6 +35,7 @@ const AdminLayout = () => {
     { label: 'Sales', path: '/admin/sales', icon: CreditCard },
     { label: 'Messages', path: '/admin/messages', icon: MessageSquare },
     { label: 'Transfers', path: '/admin/transfers', icon: ArrowLeftRight },
+    { label: 'Pages (SEO)', path: '/admin/pages', icon: FileText },
     { label: 'Settings', path: '/admin/settings', icon: Settings },
   ];
 

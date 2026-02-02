@@ -1,8 +1,92 @@
-import React from 'react';
+
+import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Twitter, Instagram, Mail } from 'lucide-react'; // Corrected imports
+import { supabase } from '@/lib/customSupabaseClient';
+import { 
+  Mail, 
+  Twitter, 
+  Instagram, 
+  Facebook, 
+  Linkedin, 
+  Github, 
+  Youtube, 
+  Link as LinkIcon, 
+  Globe, 
+  Phone, 
+  MessageCircle,
+  Twitch,
+  Dribbble,
+  Slack
+} from 'lucide-react';
+
+const iconMap = {
+  Twitter,
+  Instagram,
+  Facebook,
+  Linkedin,
+  Github,
+  Youtube,
+  Mail,
+  Link: LinkIcon,
+  Globe,
+  Phone,
+  MessageCircle,
+  Twitch,
+  Dribbble,
+  Slack
+};
 
 const Footer = () => {
+  const [contactInfo, setContactInfo] = useState({
+    heading_text: 'Have questions? Reach out to us!',
+    email: 'info@rdm.bz'
+  });
+  const [socialLinks, setSocialLinks] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let isMounted = true;
+    
+    const fetchData = async () => {
+      try {
+        const { data: contactData } = await supabase
+          .from('footer_contact')
+          .select('*')
+          .limit(1)
+          .maybeSingle();
+
+        if (isMounted && contactData) {
+          setContactInfo({
+            heading_text: contactData.heading_text || 'Have questions? Reach out to us!',
+            email: contactData.email || 'info@rdm.bz'
+          });
+        }
+
+        const { data: linksData } = await supabase
+          .from('social_media_links')
+          .select('*')
+          .order('order', { ascending: true });
+
+        if (isMounted && linksData) {
+          setSocialLinks(linksData);
+        }
+      } catch (error) {
+        console.error('Error fetching footer data:', error);
+      } finally {
+        if (isMounted) setLoading(false);
+      }
+    };
+
+    fetchData();
+    
+    return () => { isMounted = false; };
+  }, []);
+
+  const renderIcon = (iconName) => {
+    const IconComponent = iconMap[iconName] || iconMap.Link;
+    return <IconComponent className="h-6 w-6" />;
+  };
+
   return (
     <footer className="bg-slate-900 text-white py-12">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -41,19 +125,38 @@ const Footer = () => {
           {/* Contact & Social */}
           <div>
             <h3 className="text-lg font-semibold mb-4 text-white">Connect</h3>
-            <p className="text-slate-400 text-sm mb-4">Have questions? Reach out to us!</p>
-            <a href="mailto:info@rdm.bz" className="inline-flex items-center text-slate-400 hover:text-emerald-400 transition-colors mb-4 text-sm">
-              <Mail className="h-4 w-4 mr-2" /> info@rdm.bz
+            <p className="text-slate-400 text-sm mb-4">{contactInfo.heading_text}</p>
+            <a href={`mailto:${contactInfo.email}`} className="inline-flex items-center text-slate-400 hover:text-emerald-400 transition-colors mb-4 text-sm">
+              <Mail className="h-4 w-4 mr-2" /> {contactInfo.email}
             </a>
+            
             <div className="flex space-x-4 mt-4">
-              <a href="https://twitter.com/rami_kassas" target="_blank" rel="noopener noreferrer" className="text-slate-400 hover:text-emerald-400 transition-colors">
-                <Twitter className="h-6 w-6" />
-                <span className="sr-only">Twitter</span>
-              </a>
-              <a href="https://instagram.com/rami.kassas" target="_blank" rel="noopener noreferrer" className="text-slate-400 hover:text-emerald-400 transition-colors">
-                <Instagram className="h-6 w-6" /> {/* Corrected to Instagram icon */}
-                <span className="sr-only">Instagram</span> {/* Corrected capitalization */}
-              </a>
+              {socialLinks.length > 0 ? (
+                socialLinks.map((link) => (
+                  <a 
+                    key={link.id} 
+                    href={link.url} 
+                    target="_blank" 
+                    rel="noopener noreferrer" 
+                    className="text-slate-400 hover:text-emerald-400 transition-colors"
+                    title={link.platform}
+                  >
+                    {renderIcon(link.icon_name)}
+                    <span className="sr-only">{link.platform}</span>
+                  </a>
+                ))
+              ) : !loading && (
+                <>
+                  <a href="https://twitter.com/rdm_bz" target="_blank" rel="noopener noreferrer" className="text-slate-400 hover:text-emerald-400 transition-colors">
+                    <Twitter className="h-6 w-6" />
+                    <span className="sr-only">Twitter</span>
+                  </a>
+                  <a href="https://instagram.com/rdm_bz" target="_blank" rel="noopener noreferrer" className="text-slate-400 hover:text-emerald-400 transition-colors">
+                    <Instagram className="h-6 w-6" />
+                    <span className="sr-only">Instagram</span>
+                  </a>
+                </>
+              )}
             </div>
           </div>
         </div>

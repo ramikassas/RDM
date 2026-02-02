@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import { supabase } from '@/lib/customSupabaseClient';
 import { Mail, Trash2, CheckCircle, MailOpen, Clock, Search, User, Calendar, X, ArrowLeft, AlertCircle } from 'lucide-react';
@@ -7,6 +8,7 @@ import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import SEO from '@/components/SEO';
+import { formatDate } from '@/utils/formatDate';
 
 const AdminMessages = () => {
   const [messages, setMessages] = useState([]);
@@ -140,7 +142,7 @@ const AdminMessages = () => {
                         <td className="px-6 py-3 whitespace-nowrap">
                           <div className="flex items-center gap-2 text-sm text-slate-600">
                             <Clock className="h-3.5 w-3.5 text-slate-400" />
-                            {new Date(msg.created_at).toLocaleDateString()}
+                            {formatDate(msg.created_at)}
                           </div>
                         </td>
                         <td className="px-6 py-3">
@@ -210,7 +212,7 @@ const AdminMessages = () => {
                     <div className="flex justify-between items-start mb-2">
                       <div className="flex items-center gap-2">
                         <span className={`inline-block w-2 h-2 rounded-full ${msg.status === 'read' ? 'bg-slate-300' : 'bg-blue-500'}`} />
-                        <span className="text-xs text-slate-500 font-medium">{new Date(msg.created_at).toLocaleDateString()}</span>
+                        <span className="text-xs text-slate-500 font-medium">{formatDate(msg.created_at)}</span>
                       </div>
                       <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded ${
                         msg.status === 'read' ? 'bg-slate-100 text-slate-500 border border-slate-200' : 'bg-blue-100 text-blue-700 border border-blue-200'
@@ -282,7 +284,7 @@ const AdminMessages = () => {
                          <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Received Date</label>
                          <div className="flex items-center gap-2 font-medium text-slate-900 text-sm">
                             <Calendar className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                            {new Date(selectedMessage.created_at).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })}
+                            {formatDate(selectedMessage.created_at)}
                          </div>
                       </div>
                   </div>

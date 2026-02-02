@@ -1,10 +1,12 @@
+
 import React, { useState } from 'react';
 import { Mail, Phone, MapPin, Send, MessageSquare } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/use-toast';
 import { supabase } from '@/lib/customSupabaseClient';
-import SEO from '@/components/SEO';
+import SEOHead from '@/components/SEOHead';
+import { usePageSEO } from '@/hooks/usePageSEO';
 import Breadcrumbs from '@/components/Breadcrumbs';
 
 const ContactPage = () => {
@@ -16,6 +18,7 @@ const ContactPage = () => {
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
+  const { seoData } = usePageSEO('contact');
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -67,12 +70,16 @@ const ContactPage = () => {
     }
   };
 
+  const pageTitle = seoData?.h1_title || "Get in Touch with RDM";
+  const pageHeading = seoData?.page_heading || "Whether you have a question about a domain, need support, or want to make an offer, our team is here to help.";
+
   return (
     <>
-      <SEO 
-        title="Contact Us | Rare Domains Marketplace (RDM)" 
-        description="Get in touch with our team. Have questions about premium domains? Contact us for support, inquiries, or partnership opportunities."
-        keywords="contact RDM, rare domains support, premium domain inquiry, RDM customer service"
+      <SEOHead 
+        seoData={seoData}
+        defaultTitle="Contact Us | Rare Domains Marketplace (RDM)" 
+        defaultDescription="Get in touch with our team. Have questions about premium domains? Contact us for support, inquiries, or partnership opportunities."
+        defaultKeywords="contact RDM, rare domains support, premium domain inquiry, RDM customer service"
         schema={contactSchema}
       />
 
@@ -87,10 +94,10 @@ const ContactPage = () => {
             className="text-center mb-12"
           >
             <h1 className="text-4xl md:text-5xl font-black text-slate-900 mb-4">
-              Get in Touch with RDM
+              {pageTitle}
             </h1>
             <p className="text-xl text-slate-600 max-w-3xl mx-auto">
-              Whether you have a question about a domain, need support, or want to make an offer, our team is here to help.
+              {pageHeading}
             </p>
           </motion.div>
 
