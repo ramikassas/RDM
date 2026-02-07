@@ -28,10 +28,10 @@ export const formatDate = (date) => {
 };
 
 /**
- * Formats a date string, timestamp, or Date object into a date-only string.
+ * Formats a date string, timestamp, or Date object into a date-only string in YYYY-MM-DD format.
  * 
  * @param {string|number|Date} date - The date to format
- * @returns {string} - Formatted date string "DD/MM/YYYY" or "N/A"
+ * @returns {string} - Formatted date string "YYYY-MM-DD" or "N/A"
  */
 export const formatDateOnly = (date) => {
   if (!date) return 'N/A';
@@ -44,7 +44,7 @@ export const formatDateOnly = (date) => {
     const month = (d.getMonth() + 1).toString().padStart(2, '0');
     const year = d.getFullYear();
 
-    return `${day}/${month}/${year}`;
+    return `${year}-${month}-${day}`;
   } catch (error) {
     console.error('Error formatting date:', error);
     return 'N/A';

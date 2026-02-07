@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { supabase } from '@/lib/customSupabaseClient';
 import { ExternalLink, Trash2, CheckCircle, XCircle, AlertCircle, Eye } from 'lucide-react';

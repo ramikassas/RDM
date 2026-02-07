@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { supabase } from '@/lib/customSupabaseClient';
 import { ShoppingCart, Mail, Calendar, Eye, Phone, FileText, User, DollarSign, Globe, Hash, Check, X, ArrowLeft } from 'lucide-react';

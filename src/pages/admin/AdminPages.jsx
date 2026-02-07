@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { supabase } from '@/lib/customSupabaseClient';
 import { Search, Globe, Loader2, Edit, Plus, Settings } from 'lucide-react';

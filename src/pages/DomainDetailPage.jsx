@@ -17,7 +17,14 @@ import {
   BarChart3,
   MessageCircle,
   Clock,
-  ArrowRight
+  ArrowRight,
+  Info,
+  Server,
+  FileText,
+  Target,
+  CreditCard,
+  RefreshCcw,
+  Sparkles
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/lib/customSupabaseClient';
@@ -27,7 +34,31 @@ import SEO from '@/components/SEO';
 import Breadcrumbs from '@/components/Breadcrumbs';
 import WhoisModal from '@/components/WhoisModal';
 import PremiumBadge from '@/components/PremiumBadge';
+import DomainLogoDisplay from '@/components/DomainLogoDisplay';
+import DomainCard from '@/components/DomainCard';
 import { formatDateOnly } from '@/utils/formatDate';
+
+const SectionCard = ({ title, icon, children, className = "" }) => (
+  <div className={`bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden ${className}`}>
+    {(title || icon) && (
+      <div className="px-6 py-4 border-b border-slate-100 flex items-center gap-2 bg-slate-50/50">
+        {icon && <span className="text-emerald-600">{icon}</span>}
+        {title && <h2 className="text-lg font-bold text-slate-800">{title}</h2>}
+      </div>
+    )}
+    <div className="p-6">
+      {children}
+    </div>
+  </div>
+);
+
+const StatItem = ({ label, value, icon }) => (
+  <div className="flex flex-col items-center justify-center p-4 bg-slate-50 rounded-lg border border-slate-100 hover:border-emerald-200 hover:bg-emerald-50/30 transition-colors group text-center h-full">
+    {icon && <div className="mb-2 text-slate-400 group-hover:text-emerald-600 transition-colors">{icon}</div>}
+    <div className="text-xs text-slate-500 font-bold uppercase tracking-wider mb-1">{label}</div>
+    <div className="text-lg md:text-xl font-black text-slate-800 group-hover:text-emerald-700 transition-colors">{value}</div>
+  </div>
+);
 
 const DomainDetailPage = () => {
   const { domainName } = useParams();
@@ -37,6 +68,11 @@ const DomainDetailPage = () => {
   const [interestCount, setInterestCount] = useState(0);
   const [timeLeft, setTimeLeft] = useState(null);
   const { toast } = useToast();
+
+  // Recommended Domains State
+  const [recommended, setRecommended] = useState([]);
+  const [recLoading, setRecLoading] = useState(false);
+  const [recError, setRecError] = useState(false);
 
   // WHOIS State
   const [isWhoisModalOpen, setIsWhoisModalOpen] = useState(false);
@@ -48,6 +84,13 @@ const DomainDetailPage = () => {
     fetchDomain();
     trackPageView();
   }, [domainName]);
+
+  // Fetch Recommended Domains when domain is loaded
+  useEffect(() => {
+    if (domain) {
+      fetchRecommended();
+    }
+  }, [domain]);
 
   // Interest Tracking
   useEffect(() => {
@@ -141,13 +184,54 @@ const DomainDetailPage = () => {
 
   const fetchDomain = async () => {
     setLoading(true);
-    const { data, error } = await supabase
-      .from('domains')
-      .select('*')
-      .eq('name', domainName)
-      .single();
-    if (!error && data) setDomain(data);
-    setLoading(false);
+    
+    console.log(`Fetching domain details for: ${domainName}`);
+    
+    try {
+      const { data, error } = await supabase
+        .from('domains')
+        .select('*')
+        .eq('name', domainName)
+        .single();
+      
+      if (error) {
+        console.error('Error fetching domain:', error);
+        setLoading(false);
+        return;
+      }
+
+      if (data) {
+        setDomain(data);
+        console.log('Full domain data loaded.');
+      }
+    } catch (err) {
+      console.error('Unexpected error in fetchDomain:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchRecommended = async () => {
+    setRecLoading(true);
+    setRecError(false);
+    try {
+      // Fetch a batch to randomly select from
+      const { data, error } = await supabase.from('domains').select('*').limit(20);
+      
+      if (error) throw error;
+      
+      if (data && data.length > 0) {
+        // Shuffle and take 3, excluding current domain
+        const shuffled = data.sort(() => 0.5 - Math.random());
+        const filtered = shuffled.filter(d => d.name !== domainName).slice(0, 3);
+        setRecommended(filtered);
+      }
+    } catch (err) {
+      console.error('Error fetching recommended domains:', err);
+      setRecError(true);
+    } finally {
+      setRecLoading(false);
+    }
   };
 
   const handleBuyNow = () => {
@@ -232,10 +316,12 @@ const DomainDetailPage = () => {
 
   const isWeb3Domain = (domain.tld && domain.tld.toLowerCase() === '.web3') || (domain.name && domain.name.toLowerCase().endsWith('.web3'));
   const domainLen = domain.name.split('.')[0].length;
-  const isShort = domainLen <= 4;
   const currentUrl = `https://rdm.bz/domain/${domain.name}`;
+  
+  // Use new Date Format
+  const listedDateDisplay = domain.listed_date ? formatDateOnly(domain.listed_date) : formatDateOnly(domain.created_at);
+  const registrationDateDisplay = domain.registration_date ? formatDateOnly(domain.registration_date) : 'N/A';
 
-  // --- UPDATED SEO ---
   const seoTitle = `Buy ${domain.name} - Premium Domain Name Purchase`;
   const seoDescription = domain.description 
     ? `${domain.description.substring(0, 150)}... Buy ${domain.name} now.` 
@@ -253,7 +339,7 @@ const DomainDetailPage = () => {
     "@type": "Product",
     "name": domain.name,
     "description": domain.description || `Premium domain name ${domain.name} for sale.`,
-    "image": "https://rdm.bz/og-image.png",
+    "image": domain.logo_url || "https://rdm.bz/og-image.png",
     "url": currentUrl,
     "sku": domain.name,
     "offers": {
@@ -285,193 +371,316 @@ const DomainDetailPage = () => {
         description={seoDescription}
         keywords={transactionalKeywords}
         type="product"
+        image={domain.logo_url}
         schema={productSchema}
         breadcrumbSchema={breadcrumbSchema}
         canonicalUrl={currentUrl}
       />
 
-      <div className="min-h-screen bg-slate-50 font-sans">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-12">
+      <div className="min-h-screen bg-slate-50 font-sans pb-16">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 md:py-12">
+          
           <Breadcrumbs items={[{ label: 'Marketplace', path: '/marketplace' }, { label: domain.name, path: null }]} />
 
           <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
-            <main className="bg-white rounded-3xl shadow-lg shadow-slate-200/50 overflow-hidden border border-slate-100">
-              <div className="p-6 sm:p-8 md:p-12">
-                
-                {/* Header */}
-                <div className="flex flex-col lg:flex-row items-start justify-between gap-8 mb-12 pb-8 border-b border-slate-100">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-3 mb-6 flex-wrap">
-                      {domain.featured && <PremiumBadge variant="large" />}
-                      <span className="px-3 py-1 bg-slate-100 text-slate-600 text-xs font-bold rounded-full uppercase tracking-wider">{domain.tld}</span>
-                      <span className="px-3 py-1 bg-blue-50 text-blue-600 text-xs font-bold rounded-full uppercase tracking-wider flex items-center gap-1"><Tag className="w-3 h-3" /> {domain.category}</span>
-                      <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider flex items-center gap-1 ${
+            
+            {/* 1. Header Section */}
+            <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 md:p-8 flex flex-col lg:flex-row items-center lg:items-start gap-8 mb-8 relative overflow-hidden">
+               <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-50 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 opacity-50 z-0"></div>
+               
+               {/* Logo */}
+               <div className="shrink-0 relative z-10 w-full lg:w-auto flex justify-center lg:block">
+                  {domain.logo_url ? (
+                    <DomainLogoDisplay 
+                      logoUrl={domain.logo_url} 
+                      altText={domain.logo_alt_text} 
+                      domainName={domain.name} 
+                      className="mb-0"
+                      imageClassName="max-h-[160px] max-w-[280px]"
+                    />
+                  ) : (
+                    <div className="w-[200px] h-[160px] bg-slate-50 rounded-xl flex items-center justify-center border border-slate-100 text-slate-300 font-bold text-xl">
+                      {domain.name.charAt(0).toUpperCase()}
+                    </div>
+                  )}
+               </div>
+
+               {/* Info */}
+               <div className="flex-1 text-center lg:text-left relative z-10 w-full">
+                  <div className="flex flex-wrap items-center justify-center lg:justify-start gap-3 mb-4">
+                     {domain.featured && <PremiumBadge variant="default" />}
+                     <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 ${
                         domain.status === 'available' ? 'bg-emerald-50 text-emerald-700 border border-emerald-100' :
                         domain.status === 'sold' ? 'bg-red-50 text-red-700 border border-red-100' : 'bg-amber-50 text-amber-700 border border-amber-100'
                       }`}>
                         <span className={`w-2 h-2 rounded-full ${domain.status === 'available' ? 'bg-emerald-500' : domain.status === 'sold' ? 'bg-red-500' : 'bg-amber-500'}`}></span>
                         {domain.status}
                       </span>
-                    </div>
-                    
-                    <div className="flex flex-wrap items-center gap-4 mb-4">
-                      <h1 className="text-4xl sm:text-5xl md:text-7xl font-black text-slate-900 tracking-tight break-words">{domain.name}</h1>
-                    </div>
-                    
-                    <p className="text-xl text-slate-500 font-medium max-w-2xl">{domain.tagline || `The perfect digital address for your next big venture in ${domain.category}.`}</p>
+                      <span className="px-3 py-1 bg-blue-50 text-blue-600 border border-blue-100 rounded-full text-xs font-bold uppercase tracking-wider flex items-center gap-1">
+                        <Tag className="w-3 h-3" /> {domain.category}
+                      </span>
                   </div>
-                  <div className="hidden lg:block text-right">
-                    <p className="text-sm font-semibold text-slate-400 uppercase tracking-widest mb-1">Valuation</p>
-                    <div className="text-5xl font-black text-emerald-600 tracking-tight">${domain.price.toLocaleString()}</div>
-                    <p className="text-xs text-slate-400 mt-2 flex items-center justify-end gap-1"><Lock className="w-3 h-3" /> Secure Escrow Included</p>
+
+                  <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-black text-slate-900 tracking-tight break-all mb-3 leading-tight">
+                    {domain.name}
+                  </h1>
+                  <p className="text-lg text-slate-500 font-medium max-w-2xl mx-auto lg:mx-0 leading-relaxed">
+                    {domain.tagline || `The perfect digital address for your next big venture in ${domain.category}.`}
+                  </p>
+               </div>
+
+               {/* Price Desktop (Hidden Mobile) */}
+               <div className="hidden lg:flex flex-col items-end shrink-0 relative z-10 min-w-[200px]">
+                  <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Acquisition Price</p>
+                  <div className="text-5xl font-black text-emerald-600 tracking-tight mb-2">${domain.price.toLocaleString()}</div>
+                  <div className="flex items-center gap-1.5 text-xs font-medium text-slate-400 bg-slate-50 px-3 py-1.5 rounded-full border border-slate-100">
+                    <Lock className="w-3 h-3" /> Secure Transaction
                   </div>
+               </div>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+              
+              {/* Left Column: Main Content */}
+              <div className="lg:col-span-2 space-y-8">
+                
+                {/* 2. Domain Info Section (Stats) */}
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                   <StatItem label="Length" value={`${domainLen} Chars`} icon={<BarChart3 className="w-5 h-5" />} />
+                   <StatItem label="Extension" value={domain.tld} icon={<Globe className="w-5 h-5" />} />
+                   <StatItem label="Type" value={domain.name.includes('-') ? 'Hyphenated' : 'Clean'} icon={<Check className="w-5 h-5" />} />
+                   <StatItem label="Est. Value" value="Premium" icon={<TrendingUp className="w-5 h-5" />} />
                 </div>
 
-                <div className="grid grid-cols-1 lg:grid-cols-12 gap-12">
-                  <div className="lg:col-span-7 xl:col-span-8 space-y-12">
-                    <section>
-                      <h2 className="text-2xl font-bold text-slate-900 mb-4 flex items-center gap-2">Asset Overview</h2>
-                      <div className="prose prose-lg prose-slate max-w-none text-slate-600 leading-relaxed">
-                         <p>{domain.description || `Acquire ${domain.name}, a premium domain name now available for purchase. This asset offers brevity, memorability, and authority in the ${domain.category} space.`}</p>
-                      </div>
-                    </section>
-                    <section className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
-                      <h3 className="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2"><BarChart3 className="w-5 h-5 text-emerald-600" /> Asset Characteristics</h3>
-                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                         <div className="p-3 bg-slate-50 rounded-lg text-center"><div className="text-xs text-slate-500 uppercase font-bold tracking-wider mb-1">Length</div><div className="text-xl font-black text-slate-800">{domainLen} Chars</div></div>
-                         <div className="p-3 bg-slate-50 rounded-lg text-center"><div className="text-xs text-slate-500 uppercase font-bold tracking-wider mb-1">Extension</div><div className="text-xl font-black text-slate-800">{domain.tld}</div></div>
-                         <div className="p-3 bg-slate-50 rounded-lg text-center"><div className="text-xs text-slate-500 uppercase font-bold tracking-wider mb-1">Complexity</div><div className="text-xl font-black text-slate-800">{domain.name.includes('-') ? 'Hyphenated' : 'Clean'}</div></div>
-                         <div className="p-3 bg-slate-50 rounded-lg text-center"><div className="text-xs text-slate-500 uppercase font-bold tracking-wider mb-1">Est. Value</div><div className="text-xl font-black text-emerald-600">High</div></div>
-                      </div>
-                    </section>
-                    {domain.use_cases && domain.use_cases.length > 0 && (
-                      <section>
-                        <h2 className="text-2xl font-bold text-slate-900 mb-6">Strategic Applications</h2>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                          {domain.use_cases.map((useCase, index) => (
-                            <div key={index} className="flex items-start gap-4 p-4 rounded-xl bg-slate-50 border border-slate-100 hover:border-emerald-100 transition-colors">
-                              <div className="w-8 h-8 rounded-full bg-white flex items-center justify-center shadow-sm text-emerald-600 shrink-0"><Check className="w-5 h-5" /></div>
-                              <div><h3 className="font-semibold text-slate-900 mb-1">Use Case {index + 1}</h3><p className="text-sm text-slate-600 leading-snug">{useCase}</p></div>
-                            </div>
-                          ))}
-                        </div>
-                      </section>
-                    )}
-                    {domain.usp_points && domain.usp_points.length > 0 && (
-                      <section className="bg-slate-900 rounded-2xl p-8 text-white relative overflow-hidden">
-                        <div className="absolute top-0 right-0 -mt-10 -mr-10 w-96 h-96 bg-emerald-600 rounded-full mix-blend-multiply filter blur-3xl opacity-20 -translate-y-1/2 translate-x-1/2"></div>
-                        <div className="absolute bottom-0 left-0 w-96 h-96 bg-blue-600 rounded-full mix-blend-multiply filter blur-3xl opacity-20 translate-y-1/2 -translate-x-1/2"></div>
-                        <div className="relative z-10 flex flex-col md:flex-row gap-10 items-center">
-                          <h2 className="text-2xl font-bold mb-8 flex items-center gap-2 relative z-10"><ShieldCheck className="w-6 h-6 text-emerald-400" /> Investment Highlights</h2>
-                          <div className="grid gap-6 relative z-10">
-                            {domain.usp_points.map((point, index) => (
-                              <div key={index} className="flex gap-4"><div className="w-1.5 h-1.5 rounded-full bg-emerald-400 mt-2.5 shrink-0 shadow-[0_0_10px_rgba(52,211,153,0.5)]" /><p className="text-lg text-slate-200 font-light leading-relaxed">{point}</p></div>
-                            ))}
-                          </div>
-                        </div>
-                      </section>
-                    )}
-                  </div>
-
-                  {/* Sidebar */}
-                  <div className="lg:col-span-5 xl:col-span-4">
-                    <div className="sticky top-24 space-y-6">
-                      <div className="bg-white rounded-2xl p-6 md:p-8 border-2 border-slate-100 shadow-xl shadow-slate-200/50">
-                        {interestCount >= 5 && (
-                          <div className="bg-orange-50 border border-orange-100 rounded-xl p-4 flex items-start gap-3 mb-6 animate-in fade-in slide-in-from-bottom-2">
-                            <div className="bg-white p-2 rounded-full shadow-sm shrink-0"><Flame className="w-5 h-5 text-orange-500 fill-orange-500" /></div>
-                            <div><p className="text-orange-900 font-bold text-sm">Strong Demand</p><p className="text-orange-700 text-xs mt-1 font-medium leading-tight">{interestCount} potential buyers viewed this asset recently.</p></div>
-                          </div>
-                        )}
-                        <div className="lg:hidden mb-8 text-center border-b border-slate-100 pb-6">
-                          <p className="text-xs text-slate-500 font-bold uppercase tracking-widest mb-2">Buy It Now</p>
-                          <div className="text-4xl font-black text-emerald-600">${domain.price.toLocaleString()}</div>
-                        </div>
-                        <div className="space-y-4">
-                          <h3 className="text-lg font-bold text-slate-900 mb-4">Acquisition Options</h3>
-                          {isWeb3Domain ? (
-                            <Button size="lg" onClick={handleWeb3Redirect} className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold h-16 text-lg shadow-lg shadow-blue-200/50 rounded-xl transition-transform active:scale-[0.98]"><Globe className="mr-2 h-5 w-5" /> View on Unstoppable</Button>
-                          ) : (
-                            <>
-                              <Button size="lg" onClick={handleBuyNow} disabled={domain.status !== 'available'} className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold h-16 text-lg shadow-lg shadow-emerald-200/50 rounded-xl transition-transform active:scale-[0.98] flex flex-col items-center justify-center gap-0.5"><span className="flex items-center"><ShoppingCart className="mr-2 h-5 w-5" /> Buy Now</span><span className="text-[10px] font-normal opacity-80 uppercase tracking-wide">Instant Ownership Transfer</span></Button>
-                              <Button 
-                                size="lg" 
-                                onClick={handleGoDaddyBuy}
-                                disabled={domain.status !== 'available'}
-                                className="w-full mt-3 bg-[#FFD700] hover:bg-[#E6C200] text-slate-900 font-bold h-14 text-lg shadow-lg shadow-yellow-200/50 rounded-xl transition-transform active:scale-[0.98] border border-yellow-400"
-                              >
-                                <span className="flex items-center">
-                                  Buy via GoDaddy <ExternalLink className="ml-2 h-5 w-5 opacity-80" />
-                                </span>
-                              </Button>
-                            </>
-                          )}
-                          <div className="relative py-2"><div className="absolute inset-0 flex items-center"><span className="w-full border-t border-slate-200" /></div><div className="relative flex justify-center text-xs uppercase"><span className="bg-white px-2 text-slate-400 font-medium">Or negotiate</span></div></div>
-                          <Button size="lg" variant="outline" onClick={handleMakeOffer} disabled={domain.status !== 'available'} className="w-full h-14 border-2 border-slate-200 text-slate-700 font-bold hover:bg-slate-50 hover:border-slate-300 transition-all rounded-xl"><Send className="mr-2 h-5 w-5" /> Make an Offer</Button>
-                          <Button size="lg" variant="outline" onClick={handleWhatsAppContact} className="w-full h-14 border-2 border-green-200 bg-green-50 text-green-700 font-bold hover:bg-green-100 hover:border-green-300 transition-all rounded-xl"><MessageCircle className="mr-2 h-5 w-5" /> Contact via WhatsApp</Button>
-                          {timeLeft && (
-                            <div className="mt-4 p-4 bg-slate-50 rounded-xl border border-slate-100 text-center animate-in fade-in slide-in-from-top-2">
-                               <p className="text-xs uppercase font-bold text-slate-400 mb-2 flex items-center justify-center gap-1"><Clock className="w-3 h-3" /> Time until Expiration</p>
-                               {timeLeft === "EXPIRED" ? <p className="text-red-600 font-bold text-lg">Domain Expired</p> : (
-                                  <div className="flex justify-center items-end gap-2 text-slate-800">
-                                     <div className="flex flex-col items-center"><span className="text-lg font-black leading-none">{timeLeft.days}</span><span className="text-[10px] text-slate-500 uppercase">Days</span></div>
-                                     <span className="text-lg font-light text-slate-300 leading-none mb-2">/</span>
-                                     <div className="flex flex-col items-center"><span className="text-lg font-black leading-none">{timeLeft.hours}</span><span className="text-[10px] text-slate-500 uppercase">Hours</span></div>
-                                     <span className="text-lg font-light text-slate-300 leading-none mb-2">/</span>
-                                     <div className="flex flex-col items-center"><span className="text-lg font-black leading-none">{timeLeft.minutes}</span><span className="text-[10px] text-slate-500 uppercase">Min</span></div>
-                                     <span className="text-lg font-light text-slate-300 leading-none mb-2">/</span>
-                                     <div className="flex flex-col items-center"><span className="text-lg font-black leading-none">{timeLeft.seconds}</span><span className="text-[10px] text-slate-500 uppercase">Sec</span></div>
-                                  </div>
-                               )}
-                            </div>
-                          )}
-                          <div className="pt-2"><Button size="sm" variant="ghost" onClick={handleWhoisLookup} className="w-full bg-slate-100 hover:bg-slate-200 text-slate-600 font-semibold transition-all rounded-lg h-10"><Globe className="mr-2 h-4 w-4" /> WHOIS Lookup</Button></div>
-                        </div>
-                        <div className="mt-6 space-y-3">
-                          <div className="flex items-center gap-3 text-sm text-slate-500 bg-slate-50 p-3 rounded-lg"><ShieldCheck className="w-5 h-5 text-emerald-600 shrink-0" /><span>Secure escrow transaction protection</span></div>
-                          <div className="flex items-center gap-3 text-sm text-slate-500 bg-slate-50 p-3 rounded-lg"><TrendingUp className="w-5 h-5 text-emerald-600 shrink-0" /><span>High-value premium branding asset</span></div>
-                        </div>
-                      </div>
-                      <div className="text-center"><Link to="/contact" className="inline-flex items-center text-sm font-medium text-slate-500 hover:text-emerald-600 transition-colors">Need help? Contact Broker <ExternalLink className="ml-1.5 w-3 h-3" /></Link></div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Footer Internal Links */}
-                <div className="mt-20 pt-10 border-t border-slate-100">
-                   <h2 className="text-xl font-bold text-slate-900 mb-6">Explore More</h2>
-                   <div className="flex flex-wrap gap-4">
-                      {domain.tld === '.com' && (
-                        <Link to="/premium-com-domains" className="group flex items-center gap-2 px-4 py-2 bg-slate-50 text-slate-600 rounded-lg hover:bg-emerald-50 hover:text-emerald-700 transition-colors">
-                          Browse more premium .COM domains <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-                        </Link>
-                      )}
-                      <Link to="/premium-domain-pricing" className="group flex items-center gap-2 px-4 py-2 bg-slate-50 text-slate-600 rounded-lg hover:bg-emerald-50 hover:text-emerald-700 transition-colors">
-                         View premium domain pricing <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-                      </Link>
-                      <Link to="/sell-premium-domains" className="group flex items-center gap-2 px-4 py-2 bg-slate-50 text-slate-600 rounded-lg hover:bg-emerald-50 hover:text-emerald-700 transition-colors">
-                         Sell your premium domain <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-                      </Link>
-                      <Link to="/premium-domains-for-sale" className="group flex items-center gap-2 px-4 py-2 bg-slate-50 text-slate-600 rounded-lg hover:bg-emerald-50 hover:text-emerald-700 transition-colors">
-                         All premium domains for sale <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-                      </Link>
+                {/* Description */}
+                <SectionCard title="Asset Overview" icon={<FileText className="w-5 h-5" />}>
+                   <div className="prose prose-slate max-w-none text-slate-600 leading-relaxed">
+                      <p>{domain.description || `Acquire ${domain.name}, a premium domain name now available for purchase. This asset offers brevity, memorability, and authority in the ${domain.category} space.`}</p>
                    </div>
-                </div>
+                </SectionCard>
 
-                {domain.similar_domains && domain.similar_domains.length > 0 && (
-                  <div className="mt-10 pt-10 border-t border-slate-100">
-                    <h2 className="text-xl font-bold text-slate-900 mb-6">Explore Similar Premium Assets</h2>
-                    <div className="flex flex-wrap gap-3">
-                      {domain.similar_domains.map((similar, index) => (
-                        <Link to={`/marketplace?search=${similar}`} key={index} className="px-5 py-2.5 bg-white border border-slate-200 text-slate-600 rounded-full text-sm font-medium hover:border-emerald-500 hover:text-emerald-600 hover:shadow-md transition-all">
-                          {similar}
-                        </Link>
-                      ))}
+                {/* 3. Technical Specs / DNS Placeholder */}
+                <SectionCard title="Technical Specifications" icon={<Server className="w-5 h-5" />}>
+                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-4 gap-x-8">
+                      <div className="flex justify-between py-2 border-b border-slate-50">
+                        <span className="text-slate-500 text-sm">Registry</span>
+                        <span className="font-medium text-slate-900">{domain.registry || 'N/A'}</span>
+                      </div>
+                      <div className="flex justify-between py-2 border-b border-slate-50">
+                        <span className="text-slate-500 text-sm">Transfer Type</span>
+                        <span className="font-medium text-slate-900">{domain.transfer_type || 'N/A'}</span>
+                      </div>
+                      <div className="flex justify-between py-2 border-b border-slate-50">
+                        <span className="text-slate-500 text-sm">Renewal Price</span>
+                        <span className="font-medium text-slate-900">{domain.renewal_price || 'N/A'}</span>
+                      </div>
+                      <div className="flex justify-between py-2 border-b border-slate-50">
+                        <span className="text-slate-500 text-sm">Listed Date</span>
+                        <span className="font-medium text-slate-900">{listedDateDisplay}</span>
+                      </div>
+                      <div className="flex justify-between py-2 border-b border-slate-50">
+                        <span className="text-slate-500 text-sm">Registration Date</span>
+                        <span className="font-medium text-slate-900">{registrationDateDisplay}</span>
+                      </div>
+                   </div>
+                   {domain.technical_specifications && (
+                     <div className="mt-4 pt-4 border-t border-slate-100 text-sm text-slate-600 leading-relaxed">
+                       <p className="font-medium text-slate-700 mb-1">Additional Specs:</p>
+                       {domain.technical_specifications}
+                     </div>
+                   )}
+                   <div className="mt-6 pt-4 border-t border-slate-100 flex justify-end">
+                      <Button variant="outline" size="sm" onClick={handleWhoisLookup} className="text-xs">
+                         <Globe className="w-3 h-3 mr-2" /> View Detailed WHOIS
+                      </Button>
+                   </div>
+                </SectionCard>
+
+                {/* 5. Additional Info (Use Cases & USPs) */}
+                {domain.use_cases && domain.use_cases.length > 0 && (
+                   <SectionCard title="Strategic Applications" icon={<Target className="w-5 h-5" />}>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        {domain.use_cases.map((useCase, index) => (
+                          <div key={index} className="flex items-start gap-3 p-3 rounded-lg bg-slate-50 border border-slate-100 hover:border-emerald-200 transition-colors">
+                             <Check className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />
+                             <p className="text-sm text-slate-700 leading-snug">{useCase}</p>
+                          </div>
+                        ))}
+                      </div>
+                   </SectionCard>
+                )}
+
+                {domain.usp_points && domain.usp_points.length > 0 && (
+                  <div className="bg-slate-900 rounded-2xl p-8 text-white relative overflow-hidden shadow-lg">
+                    <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-600/20 rounded-full blur-3xl -mt-10 -mr-10"></div>
+                    <div className="relative z-10">
+                       <h3 className="text-xl font-bold mb-6 flex items-center gap-2"><ShieldCheck className="w-6 h-6 text-emerald-400" /> Investment Highlights</h3>
+                       <div className="grid gap-4">
+                          {domain.usp_points.map((point, index) => (
+                             <div key={index} className="flex gap-4">
+                               <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 mt-2.5 shrink-0 box-content ring-4 ring-emerald-400/20" />
+                               <p className="text-slate-200 leading-relaxed">{point}</p>
+                             </div>
+                          ))}
+                       </div>
                     </div>
                   </div>
                 )}
               </div>
-            </main>
+
+              {/* Right Column: Settings/Actions */}
+              <div className="space-y-6">
+                 
+                 {/* Mobile Price (Visible only on Mobile) */}
+                 <div className="lg:hidden bg-white rounded-xl shadow-sm border border-slate-200 p-6 text-center">
+                    <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Acquisition Price</p>
+                    <div className="text-4xl font-black text-emerald-600 mb-2">${domain.price.toLocaleString()}</div>
+                 </div>
+
+                 {/* 6. Settings Section (Repurposed as Acquisition Actions) */}
+                 <div className="bg-white rounded-2xl shadow-lg shadow-emerald-900/5 border border-emerald-100 p-6 sticky top-24">
+                    <h3 className="text-lg font-bold text-slate-900 mb-6 flex items-center gap-2">
+                       <CreditCard className="w-5 h-5 text-emerald-600" /> Purchase Options
+                    </h3>
+                    
+                    <div className="space-y-4">
+                       {isWeb3Domain ? (
+                          <Button size="lg" onClick={handleWeb3Redirect} className="w-full h-14 text-base font-bold bg-blue-600 hover:bg-blue-700">
+                             <Globe className="w-5 h-5 mr-2" /> View on Unstoppable
+                          </Button>
+                       ) : (
+                          <>
+                             <Button size="lg" onClick={handleBuyNow} disabled={domain.status !== 'available'} className="w-full h-14 text-base font-bold bg-emerald-600 hover:bg-emerald-700 shadow-md shadow-emerald-200">
+                                <ShoppingCart className="w-5 h-5 mr-2" /> Buy Now
+                             </Button>
+                             
+                             <div className="grid grid-cols-2 gap-3">
+                                <Button variant="outline" onClick={handleMakeOffer} disabled={domain.status !== 'available'} className="h-12 font-semibold">
+                                   <Send className="w-4 h-4 mr-2" /> Offer
+                                </Button>
+                                <Button variant="outline" onClick={handleWhatsAppContact} className="h-12 font-semibold text-green-700 bg-green-50 border-green-200 hover:bg-green-100">
+                                   <MessageCircle className="w-4 h-4 mr-2" /> Chat
+                                </Button>
+                             </div>
+                             
+                             <Button 
+                                variant="secondary" 
+                                onClick={handleGoDaddyBuy} 
+                                className="w-full bg-[#FFD700] hover:bg-[#E6C200] text-slate-900 font-bold border border-yellow-400/50"
+                             >
+                                Buy via GoDaddy <ExternalLink className="w-4 h-4 ml-2 opacity-70" />
+                             </Button>
+                          </>
+                       )}
+                    </div>
+
+                    {/* Timer */}
+                    {timeLeft && timeLeft !== "EXPIRED" && (
+                       <div className="mt-6 pt-6 border-t border-slate-100">
+                          <div className="flex items-center justify-between text-slate-500 mb-2">
+                             <span className="text-xs font-bold uppercase tracking-wider flex items-center gap-1"><Clock className="w-3 h-3" /> Offer Expires In</span>
+                          </div>
+                          <div className="grid grid-cols-4 gap-1 text-center bg-slate-50 rounded-lg p-2 border border-slate-100">
+                             <div><span className="block font-black text-slate-800">{timeLeft.days}</span><span className="text-[10px] uppercase">Days</span></div>
+                             <div><span className="block font-black text-slate-800">{timeLeft.hours}</span><span className="text-[10px] uppercase">Hrs</span></div>
+                             <div><span className="block font-black text-slate-800">{timeLeft.minutes}</span><span className="text-[10px] uppercase">Min</span></div>
+                             <div><span className="block font-black text-slate-800">{timeLeft.seconds}</span><span className="text-[10px] uppercase">Sec</span></div>
+                          </div>
+                       </div>
+                    )}
+                 </div>
+
+                 {/* 4. Analytics Section (Market Demand) */}
+                 {interestCount > 0 && (
+                    <div className="bg-orange-50 rounded-xl border border-orange-100 p-5 shadow-sm">
+                       <div className="flex items-center gap-3 mb-3">
+                          <div className="p-2 bg-white rounded-full text-orange-500 shadow-sm"><Flame className="w-5 h-5 fill-orange-500" /></div>
+                          <h3 className="font-bold text-orange-900">High Demand</h3>
+                       </div>
+                       <p className="text-sm text-orange-800 leading-relaxed">
+                          This domain has been viewed by <span className="font-bold">{interestCount} potential buyers</span> in the last 30 days. Action recommended.
+                       </p>
+                    </div>
+                 )}
+                 
+                 {/* Trust Section */}
+                 <div className="bg-white rounded-xl border border-slate-200 p-6 space-y-4">
+                    <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider mb-2">Buyer Protection</h3>
+                    <div className="flex items-center gap-3 text-sm text-slate-600">
+                       <ShieldCheck className="w-5 h-5 text-emerald-600 shrink-0" />
+                       <span>Domain ownership transfer guarantee</span>
+                    </div>
+                    <div className="flex items-center gap-3 text-sm text-slate-600">
+                       <Lock className="w-5 h-5 text-emerald-600 shrink-0" />
+                       <span>Secure escrow payment processing</span>
+                    </div>
+                    <div className="pt-4 border-t border-slate-100">
+                       <Link to="/contact" className="text-sm text-slate-500 hover:text-emerald-600 flex items-center gap-1 font-medium transition-colors">
+                          <Info className="w-4 h-4" /> Questions? Contact Broker
+                       </Link>
+                    </div>
+                 </div>
+
+              </div>
+
+            </div>
+
+             {/* Footer Links */}
+            <div className="mt-16 pt-10 border-t border-slate-200">
+               <h2 className="text-xl font-bold text-slate-900 mb-6">Explore More</h2>
+               <div className="flex flex-wrap gap-4">
+                  {domain.tld === '.com' && (
+                    <Link to="/premium-com-domains" className="group flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 text-slate-600 rounded-lg hover:bg-emerald-50 hover:text-emerald-700 hover:border-emerald-200 transition-all shadow-sm">
+                      Browse .COM domains <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                    </Link>
+                  )}
+                  <Link to="/premium-domain-pricing" className="group flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 text-slate-600 rounded-lg hover:bg-emerald-50 hover:text-emerald-700 hover:border-emerald-200 transition-all shadow-sm">
+                     View pricing guide <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                  </Link>
+                  <Link to="/premium-domains-for-sale" className="group flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 text-slate-600 rounded-lg hover:bg-emerald-50 hover:text-emerald-700 hover:border-emerald-200 transition-all shadow-sm">
+                     All premium domains <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                  </Link>
+               </div>
+            </div>
+
+            {/* Recommended Domains Section */}
+            <div className="mt-12 pt-10 border-t border-slate-200">
+              <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4 mb-8">
+                 <div>
+                    <h2 className="text-2xl font-bold text-slate-900 mb-2 flex items-center gap-2">
+                       <Sparkles className="w-6 h-6 text-emerald-600" /> Recommended Domains
+                    </h2>
+                    <p className="text-slate-500 max-w-2xl">
+                       Hand-picked premium domains that might interest you.
+                    </p>
+                 </div>
+              </div>
+              
+              {recLoading ? (
+                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {[1, 2, 3].map((i) => (
+                       <div key={i} className="bg-slate-50 h-[280px] rounded-xl animate-pulse"></div>
+                    ))}
+                 </div>
+              ) : recError ? (
+                 <div className="bg-slate-50 border border-slate-100 rounded-xl p-8 text-center">
+                    <AlertCircle className="w-8 h-8 mx-auto text-slate-300 mb-2" />
+                    <p className="text-slate-500 mb-4">Failed to load recommendations.</p>
+                    <Button variant="outline" size="sm" onClick={fetchRecommended} className="gap-2">
+                       <RefreshCcw className="w-4 h-4" /> Retry
+                    </Button>
+                 </div>
+              ) : recommended.length > 0 ? (
+                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {recommended.map((item) => (
+                       <DomainCard key={item.id} domain={item} />
+                    ))}
+                 </div>
+              ) : (
+                 <p className="text-slate-500 italic">No additional recommendations at this time.</p>
+              )}
+            </div>
+
           </motion.div>
           
           {showOfferForm && <MakeOfferForm domain={domain} onClose={() => setShowOfferForm(false)} />}
