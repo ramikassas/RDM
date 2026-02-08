@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { X, AlertCircle, CheckCircle2, Loader2, DollarSign } from 'lucide-react';

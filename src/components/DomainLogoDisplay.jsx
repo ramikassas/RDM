@@ -5,6 +5,7 @@ import { ImageOff, Loader2 } from 'lucide-react';
 
 const DomainLogoDisplay = ({ 
   logoUrl, 
+  actualImageUrl, // New prop for the explicitly constructed URL
   altText, 
   domainName, 
   className = "mb-8",
@@ -13,22 +14,17 @@ const DomainLogoDisplay = ({
   const [loaded, setLoaded] = useState(false);
   const [error, setError] = useState(false);
 
+  // Determine which URL to use: prefer actualImageUrl, fallback to logoUrl
+  const finalUrl = actualImageUrl || logoUrl;
+
   useEffect(() => {
-    // CRITICAL DEBUG: Logging for troubleshooting
-    if (logoUrl) {
-      console.group(`[DomainLogoDisplay] Rendering for: ${domainName}`);
-      console.log('Provided Logo URL:', logoUrl);
-      console.log('Alt Text:', altText);
-      console.groupEnd();
-    }
-    
     // Reset state when props change
     setError(false);
     setLoaded(false);
-  }, [logoUrl, domainName, altText]);
+  }, [finalUrl]);
 
   // If no URL provided, don't render anything
-  if (!logoUrl) return null;
+  if (!finalUrl) return null;
 
   // Fallback UI if image fails to load
   if (error) {
@@ -63,7 +59,7 @@ const DomainLogoDisplay = ({
         {/* Image Container */}
         <div className={`bg-white p-4 sm:p-6 rounded-3xl shadow-lg shadow-slate-100 border border-slate-100 inline-block relative z-10 ${!loaded ? 'invisible' : 'visible'}`}>
            <img 
-            src={logoUrl} 
+            src={finalUrl} 
             alt={altText || `${domainName} logo`}
             className={`
               w-auto h-auto object-contain
@@ -71,12 +67,9 @@ const DomainLogoDisplay = ({
               ${imageClassName}
             `}
             onLoad={() => {
-              console.log(`[DomainLogoDisplay] Image loaded successfully for ${domainName}`);
               setLoaded(true);
             }}
-            onError={(e) => {
-              console.error(`[DomainLogoDisplay] Image load error for ${domainName}. URL: ${logoUrl}`);
-              console.error(e);
+            onError={() => {
               setError(true);
             }}
           />

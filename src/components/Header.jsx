@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Link, NavLink, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -19,14 +20,10 @@ const Header = () => {
   ];
 
   const handleSignOut = async () => {
-    // Close menu immediately for better UX
     setIsMobileMenuOpen(false);
     
     try {
-      // Call signOut from context - this now clears state immediately
       await signOut();
-      
-      // Force navigation to home page and replace history entry
       navigate('/', { replace: true });
       
       toast({
@@ -35,7 +32,6 @@ const Header = () => {
       });
     } catch (error) {
       console.error("Logout error:", error);
-      // Fallback navigation
       navigate('/', { replace: true }); 
     }
   };
@@ -70,7 +66,7 @@ const Header = () => {
               {user && (
                 <li>
                   <NavLink
-                    to="/0955"
+                    to="/admin"
                     className={({ isActive }) =>
                       `font-medium transition-colors hover:text-emerald-600 ${
                         isActive ? 'text-emerald-600' : 'text-slate-600'
@@ -109,10 +105,7 @@ const Header = () => {
                   </div>
                 </div>
               </div>
-            ) : (
-              /* Sign In button intentionally hidden from public interface */
-              null
-            )}
+            ) : null}
           </div>
 
           {/* Mobile Menu Button */}
@@ -159,7 +152,7 @@ const Header = () => {
               ))}
               {user && (
                 <NavLink
-                  to="/0955"
+                  to="/admin"
                   className={({ isActive }) =>
                     `block px-4 py-3 rounded-lg text-base font-medium transition-colors ${
                       isActive

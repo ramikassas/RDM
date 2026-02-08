@@ -37,6 +37,7 @@ import PremiumBadge from '@/components/PremiumBadge';
 import DomainLogoDisplay from '@/components/DomainLogoDisplay';
 import DomainCard from '@/components/DomainCard';
 import { formatDateOnly } from '@/utils/formatDate';
+import { getSupabaseImageUrl } from '@/utils/getSupabaseImageUrl';
 
 const SectionCard = ({ title, icon, children, className = "" }) => (
   <section className={`bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden ${className}`}>
@@ -125,7 +126,7 @@ const DomainDetailPage = () => {
     if (domain && domain.id) {
        timer = setTimeout(trackInterest, TRACKING_DELAY);
     }
-    return () => clearTimeout(timer);
+    return () => clearInterval(timer);
   }, [domain]);
 
   useEffect(() => {
@@ -186,20 +187,35 @@ const DomainDetailPage = () => {
     setLoading(true);
     
     try {
-      const { data, error } = await supabase
+      // 1. Fetch Domain
+      const { data: domainData, error: domainError } = await supabase
         .from('domains')
         .select('*')
         .eq('name', domainName)
         .single();
       
-      if (error) {
-        console.error('Error fetching domain:', error);
+      if (domainError) {
+        console.error('Error fetching domain:', domainError);
         setLoading(false);
         return;
       }
 
-      if (data) {
-        setDomain(data);
+      // 2. Fetch SEO Settings (Separately to avoid complex joins in frontend-only env)
+      let seoData = null;
+      if (domainData) {
+        const { data: seo, error: seoError } = await supabase
+          .from('domain_seo_settings')
+          .select('*')
+          .eq('domain_id', domainData.id)
+          .maybeSingle();
+        
+        if (!seoError) {
+          seoData = seo;
+        }
+      }
+
+      if (domainData) {
+        setDomain({ ...domainData, seo: seoData });
       }
     } catch (err) {
       console.error('Unexpected error in fetchDomain:', err);
@@ -313,24 +329,27 @@ const DomainDetailPage = () => {
 
   const isWeb3Domain = (domain.tld && domain.tld.toLowerCase() === '.web3') || (domain.name && domain.name.toLowerCase().endsWith('.web3'));
   const domainLen = domain.name.split('.')[0].length;
+
+  // --- SEO OPTIMIZATION LOGIC ---
   const currentUrl = `https://rdm.bz/domain/${domain.name}`;
   
   // Use new Date Format
   const listedDateDisplay = domain.listed_date ? formatDateOnly(domain.listed_date) : formatDateOnly(domain.created_at);
   const registrationDateDisplay = domain.registration_date ? formatDateOnly(domain.registration_date) : 'N/A';
 
-  // --- SEO OPTIMIZATION LOGIC ---
-
   // 1. Dynamic Meta Tags
-  const seoTitle = `${domain.name} - Premium Domain for Sale | RDM`;
+  const seoTitle = domain.seo?.page_title || `${domain.name} - Premium Domain for Sale | RDM`;
   
-  // 2. Optimized Meta Description
+  // 2. Separate Social Title (OG)
+  const seoOgTitle = domain.seo?.og_title || seoTitle;
+
+  // 3. Optimized Meta Description - EXCLUSIVELY FROM domain.description
   const seoDescription = domain.description 
-    ? `Buy ${domain.name} today. ${domain.description.substring(0, 100)}... Premium ${domain.category} domain available for immediate transfer. Price: $${domain.price.toLocaleString()}. Secure transaction via RDM.`
+    ? domain.description
     : `Buy ${domain.name} today. This premium ${domain.category} domain is available for sale. Price: $${domain.price.toLocaleString()}. Secure escrow and fast transfer available.`;
 
-  // 3. Keywords
-  const transactionalKeywords = [
+  // 4. Keywords
+  const seoKeywords = domain.seo?.meta_keywords || [
     `buy ${domain.name}`,
     `purchase ${domain.name}`,
     `${domain.name} price`,
@@ -340,33 +359,51 @@ const DomainDetailPage = () => {
     `${domain.category} domains`
   ].join(', ');
 
-  // 4. Structured Data (JSON-LD)
+  // 5. Generate Actual Supabase Image URL
+  const actualSupabaseUrl = getSupabaseImageUrl(domain.name, domain.logo_url);
   
-  // Product Schema
-  const productSchema = {
-    "@context": "https://schema.org",
-    "@type": "Product",
-    "name": domain.name,
-    "description": seoDescription,
-    "image": domain.logo_url || "https://rdm.bz/og-image.png",
-    "url": currentUrl,
-    "sku": domain.name,
-    "category": domain.category,
-    "offers": {
-      "@type": "Offer",
+  // 6. Custom Image Priority
+  let finalImage = null;
+
+  if (domain.seo?.og_image_url && domain.seo.og_image_url.trim() !== '') {
+    finalImage = domain.seo.og_image_url;
+  } else if (actualSupabaseUrl) {
+    finalImage = actualSupabaseUrl;
+  } else if (domain.logo_url) {
+    finalImage = domain.logo_url;
+  }
+
+  const finalCanonical = domain.seo?.canonical_url || currentUrl;
+  const finalOgUrl = domain.seo?.og_url || currentUrl;
+
+  // 7. Structured Data (JSON-LD)
+  const productSchema = domain.seo?.schema_data && Object.keys(domain.seo.schema_data).length > 0 
+    ? domain.seo.schema_data 
+    : {
+      "@context": "https://schema.org",
+      "@type": "Product",
+      "name": domain.name,
+      "description": seoDescription, // Uses the domain.description based variable
+      "image": finalImage,
+      "url": currentUrl,
+      "sku": domain.name,
+      "category": domain.category,
       "priceCurrency": "USD",
       "price": domain.price,
-      "itemCondition": "https://schema.org/NewCondition",
-      "availability": domain.status === 'available' ? "https://schema.org/InStock" : "https://schema.org/OutOfStock",
-      "seller": {
-        "@type": "Organization",
-        "name": "Rare Domains Marketplace (RDM)",
-        "url": "https://rdm.bz"
+      "offers": {
+        "@type": "Offer",
+        "priceCurrency": "USD",
+        "price": domain.price,
+        "itemCondition": "https://schema.org/NewCondition",
+        "availability": domain.status === 'available' ? "https://schema.org/InStock" : "https://schema.org/OutOfStock",
+        "seller": {
+          "@type": "Organization",
+          "name": "Rare Domains Marketplace (RDM)",
+          "url": "https://rdm.bz"
+        }
       }
-    }
-  };
+    };
 
-  // Breadcrumb Schema
   const breadcrumbSchema = {
     "@context": "https://schema.org",
     "@type": "BreadcrumbList",
@@ -383,34 +420,37 @@ const DomainDetailPage = () => {
     }]
   };
 
-  // Organization Schema (Website Context)
   const organizationSchema = {
     "@context": "https://schema.org",
     "@type": "Organization",
     "name": "Rare Domains Marketplace",
     "url": "https://rdm.bz",
-    "logo": "https://rdm.bz/logo.png", // Assuming default logo
+    "logo": "https://rdm.bz/logo.png",
     "sameAs": [
-       "https://twitter.com/raredomains",
-       "https://facebook.com/raredomains"
+       "https://twitter.com/rdm_bz",
+       "https://instagram.com/rdm_bz"
     ]
   };
 
   const descriptiveAltText = `${domain.name} logo - premium domain for sale`;
+  
+  // PRIORITY: page_heading (new) -> h1_title (legacy) -> domain.name (fallback)
+  const displayH1 = domain.seo?.page_heading || domain.seo?.h1_title || domain.name;
 
   return (
     <>
       <SEO 
         title={seoTitle}
-        description={seoDescription}
-        keywords={transactionalKeywords}
+        description={seoDescription} // Updated description source
+        keywords={seoKeywords}
         type="product"
-        image={domain.logo_url}
+        image={finalImage}
+        url={finalOgUrl}
+        canonicalUrl={finalCanonical}
         schema={productSchema}
         breadcrumbSchema={breadcrumbSchema}
-        canonicalUrl={currentUrl}
+        ogTitle={seoOgTitle}
       />
-      {/* Inject Organization Schema separately if needed, or rely on global layout */}
       <script type="application/ld+json">
         {JSON.stringify(organizationSchema)}
       </script>
@@ -431,6 +471,7 @@ const DomainDetailPage = () => {
                   {domain.logo_url ? (
                     <DomainLogoDisplay 
                       logoUrl={domain.logo_url} 
+                      actualImageUrl={actualSupabaseUrl}
                       altText={descriptiveAltText} 
                       domainName={domain.name} 
                       className="mb-0"
@@ -459,9 +500,9 @@ const DomainDetailPage = () => {
                       </span>
                   </div>
 
-                  {/* SEO Optimized H1 */}
+                  {/* SEO Optimized H1 - Uses page_heading */}
                   <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-black text-slate-900 tracking-tight break-all mb-3 leading-tight">
-                    {domain.name}
+                    {displayH1}
                     <span className="sr-only"> - Premium Domain for Sale</span>
                   </h1>
                   <p className="text-lg text-slate-500 font-medium max-w-2xl mx-auto lg:mx-0 leading-relaxed">

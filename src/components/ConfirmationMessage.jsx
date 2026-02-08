@@ -1,5 +1,6 @@
+
 import React from 'react';
-import { Mail, CheckCircle2, AlertCircle } from 'lucide-react';
+import { Mail, CheckCircle2 } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 const ConfirmationMessage = ({ title = "Action Successful!", children }) => {

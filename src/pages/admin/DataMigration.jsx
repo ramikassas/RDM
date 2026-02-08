@@ -1,9 +1,11 @@
+
 import React, { useState } from 'react';
 import { migrateFooterData } from '@/utils/migrateFooterData';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Database, CheckCircle, AlertCircle, Loader2, ArrowRight } from 'lucide-react';
+import { Database, CheckCircle, AlertCircle, Loader2 } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
+import DataMigrationSEO from '@/components/admin/DataMigrationSEO';
 
 const DataMigration = () => {
   const [loading, setLoading] = useState(false);
@@ -34,6 +36,9 @@ const DataMigration = () => {
         <h1 className="text-3xl font-bold text-slate-900">System Data Setup</h1>
         <p className="text-slate-500 mt-2">One-time setup tools to migrate hardcoded application data to the database.</p>
       </div>
+
+      {/* SEO Migration Tool */}
+      <DataMigrationSEO />
 
       <Card>
         <CardHeader>

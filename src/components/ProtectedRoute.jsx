@@ -1,11 +1,10 @@
-import React, { useState } from 'react';
-import { Navigate } from 'react-router-dom';
+
+import React from 'react';
 import { useAuth } from '@/contexts/SupabaseAuthContext';
 import LoginModal from '@/components/LoginModal';
 
 const ProtectedRoute = ({ children }) => {
   const { user } = useAuth();
-  const [showLogin, setShowLogin] = useState(true);
 
   if (!user) {
     // Instead of redirecting immediately, we can show the login modal

@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from '@/components/ui/toaster';
@@ -36,6 +37,8 @@ import AdminTransfers from '@/pages/admin/AdminTransfers';
 import AdminSettings from '@/pages/admin/AdminSettings';
 import AdminPages from '@/pages/admin/AdminPages';
 import DataMigration from '@/pages/admin/DataMigration';
+import SEOManagerPage from '@/pages/admin/SEOManagerPage';
+import FixSEOImages from '@/pages/admin/FixSEOImages'; // New import
 
 // Wrapper for Public Layout
 const PublicLayout = ({ children }) => (
@@ -171,6 +174,8 @@ function App() {
               <Route path="pages" element={<AdminPages />} />
               <Route path="settings" element={<AdminSettings />} />
               <Route path="migrate" element={<DataMigration />} />
+              <Route path="seo-manager" element={<SEOManagerPage />} />
+              <Route path="fix-seo-images" element={<FixSEOImages />} />
             </Route>
 
             {/* Legacy Admin Redirects */}
