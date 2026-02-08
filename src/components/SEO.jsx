@@ -2,6 +2,7 @@
 import React from 'react';
 import { Helmet } from 'react-helmet';
 import { useLocation } from 'react-router-dom';
+import { generateDomainSchema } from '@/utils/schemaGenerator';
 
 const SEO = ({ 
   title, 
@@ -16,7 +17,8 @@ const SEO = ({
   canonicalUrl,
   schema,
   breadcrumbSchema,
-  ogTitle
+  ogTitle,
+  domainData // New prop for auto-generation
 }) => {
   const location = useLocation();
   const baseUrl = 'https://rdm.bz';
@@ -49,10 +51,37 @@ const SEO = ({
   const defaultImage = "https://rdm.bz/og-image.png";
   const finalImage = image || defaultImage;
 
-  // Schema Injection
+  // Schema Injection Logic
   const schemasToRender = [];
-  if (schema) schemasToRender.push(schema);
-  if (breadcrumbSchema) schemasToRender.push(breadcrumbSchema);
+  
+  // 1. Add explicitly passed schema (e.g. Breadcrumbs or Custom Domain Schema)
+  if (schema) {
+    schemasToRender.push(schema);
+  }
+  
+  // 2. Auto-generate Domain Product Schema if no custom schema provided AND domainData is present
+  // We check if 'schema' is missing or empty to avoid duplicates
+  const hasCustomSchema = schema && Object.keys(schema).length > 0;
+  
+  if (!hasCustomSchema && domainData) {
+    const autoSchema = generateDomainSchema({
+      name: domainData.name,
+      description: domainData.description || finalDescription,
+      image: domainData.image || finalImage,
+      url: domainData.url || finalCanonicalUrl,
+      price: domainData.price,
+      status: domainData.status
+    });
+    
+    if (autoSchema) {
+      schemasToRender.push(autoSchema);
+    }
+  }
+
+  // 3. Add Breadcrumb schema if provided
+  if (breadcrumbSchema) {
+    schemasToRender.push(breadcrumbSchema);
+  }
 
   return (
     <Helmet>
@@ -84,6 +113,7 @@ const SEO = ({
       {/* JSON-LD Schemas */}
       {schemasToRender.map((s, index) => (
         <script key={index} type="application/ld+json">
+          {/* Auto-generated JSON-LD Schema from domain data (if applicable) */}
           {JSON.stringify(s)}
         </script>
       ))}

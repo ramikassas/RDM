@@ -2,9 +2,8 @@
 import React, { useEffect, useState } from 'react';
 import { supabase } from '@/lib/customSupabaseClient';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { Search, Loader2, Edit, CheckCircle, AlertTriangle, RefreshCcw, AlertCircle, Image as ImageIcon, ExternalLink } from 'lucide-react';
+import { Search, Loader2, Edit, CheckCircle, AlertTriangle, RefreshCcw, AlertCircle, Image as ImageIcon, ExternalLink, Code } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import SEOEditorModal from '@/components/admin/seo/SEOEditorModal';
 import { formatDateOnly } from '@/utils/formatDate';
@@ -38,7 +37,7 @@ const SEOManagerPage = () => {
       // 2. Fetch SEO statuses
       const { data: seoData, error: seoError } = await supabase
         .from('domain_seo_settings')
-        .select('domain_id, updated_at, og_image_url');
+        .select('domain_id, updated_at, og_image_url, schema_data');
 
       if (seoError) throw seoError;
 
@@ -47,17 +46,23 @@ const SEOManagerPage = () => {
       seoData.forEach(item => {
         seoMap.set(item.domain_id, {
            updated_at: item.updated_at,
-           og_image_url: item.og_image_url
+           og_image_url: item.og_image_url,
+           schema_data: item.schema_data
         });
       });
 
       const processed = domainsData.map(d => {
         const seo = seoMap.get(d.id);
+        
+        // Determine if using custom schema or falling back to auto
+        const hasCustomSchema = seo?.schema_data && Object.keys(seo.schema_data).length > 0;
+        
         return {
           ...d,
           hasSeo: !!seo,
           lastUpdated: seo?.updated_at,
-          ogImage: seo?.og_image_url
+          ogImage: seo?.og_image_url,
+          hasCustomSchema
         };
       });
 
@@ -131,18 +136,19 @@ const SEOManagerPage = () => {
         ) : (
           <div className="bg-white rounded-lg border border-slate-200 overflow-hidden shadow-sm">
              <div className="grid grid-cols-12 gap-4 p-4 bg-slate-50 border-b font-medium text-sm text-slate-500 uppercase tracking-wider">
-               <div className="col-span-5 md:col-span-3">Domain Name</div>
+               <div className="col-span-4 md:col-span-3">Domain Name</div>
                <div className="col-span-4 md:col-span-2">SEO Status</div>
-               <div className="hidden md:block col-span-4 text-xs">OG Image</div>
+               <div className="hidden md:block col-span-2 text-xs">Schema</div>
+               <div className="hidden md:block col-span-2 text-xs">OG Image</div>
                <div className="col-span-3 md:col-span-2 hidden md:block">Last Updated</div>
-               <div className="col-span-3 md:col-span-1 text-right">Actions</div>
+               <div className="col-span-4 md:col-span-1 text-right">Actions</div>
              </div>
              
              <div className="divide-y divide-slate-100">
                {filteredDomains.length > 0 ? (
                  filteredDomains.map(domain => (
                    <div key={domain.id} className="grid grid-cols-12 gap-4 p-4 items-center hover:bg-slate-50/50 transition-colors">
-                     <div className="col-span-5 md:col-span-3 font-semibold text-slate-900 truncate">
+                     <div className="col-span-4 md:col-span-3 font-semibold text-slate-900 truncate">
                        {domain.name}
                      </div>
                      <div className="col-span-4 md:col-span-2">
@@ -156,7 +162,18 @@ const SEOManagerPage = () => {
                          </Badge>
                        )}
                      </div>
-                     <div className="hidden md:block col-span-4 text-xs text-slate-500 truncate" title={domain.ogImage || 'No Image Set'}>
+                     <div className="hidden md:block col-span-2">
+                       {domain.hasCustomSchema ? (
+                         <Badge variant="secondary" className="text-[10px] bg-purple-50 text-purple-700 border-purple-100">
+                           Custom
+                         </Badge>
+                       ) : (
+                         <Badge variant="secondary" className="text-[10px] bg-blue-50 text-blue-700 border-blue-100 gap-1">
+                           <Code className="w-3 h-3" /> Auto Schema
+                         </Badge>
+                       )}
+                     </div>
+                     <div className="hidden md:block col-span-2 text-xs text-slate-500 truncate" title={domain.ogImage || 'No Image Set'}>
                        {domain.ogImage ? (
                          domain.ogImage.includes('og-image.png') ? (
                            <span className="text-amber-600 flex items-center gap-1"><AlertCircle className="w-3 h-3" /> Placeholder</span>
@@ -170,7 +187,7 @@ const SEOManagerPage = () => {
                      <div className="col-span-3 md:col-span-2 hidden md:block text-sm text-slate-500">
                        {domain.lastUpdated ? formatDateOnly(domain.lastUpdated) : '-'}
                      </div>
-                     <div className="col-span-3 md:col-span-1 flex justify-end">
+                     <div className="col-span-4 md:col-span-1 flex justify-end">
                        <Button size="sm" variant="outline" onClick={() => handleEdit(domain)}>
                          <Edit className="w-4 h-4 mr-2" /> Edit
                        </Button>

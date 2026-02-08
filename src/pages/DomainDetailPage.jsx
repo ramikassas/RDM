@@ -337,33 +337,6 @@ const DomainDetailPage = () => {
 
   const finalCanonical = domain.seo?.canonical_url || currentUrl;
 
-  const productSchema = domain.seo?.schema_data && Object.keys(domain.seo.schema_data).length > 0 
-    ? domain.seo.schema_data 
-    : {
-      "@context": "https://schema.org",
-      "@type": "Product",
-      "name": domain.name,
-      "description": seoDescription,
-      "image": finalImage,
-      "url": currentUrl,
-      "sku": domain.name,
-      "category": domain.category,
-      "priceCurrency": "USD",
-      "price": domain.price,
-      "offers": {
-        "@type": "Offer",
-        "priceCurrency": "USD",
-        "price": domain.price,
-        "itemCondition": "https://schema.org/NewCondition",
-        "availability": domain.status === 'available' ? "https://schema.org/InStock" : "https://schema.org/OutOfStock",
-        "seller": {
-          "@type": "Organization",
-          "name": "Rare Domains Marketplace (RDM)",
-          "url": "https://rdm.bz"
-        }
-      }
-    };
-
   const breadcrumbSchema = {
     "@context": "https://schema.org",
     "@type": "BreadcrumbList",
@@ -408,16 +381,25 @@ const DomainDetailPage = () => {
         twitterUrl={socialUrl}
         twitterSite="@rami_kassas"
         canonicalUrl={finalCanonical}
-        schema={productSchema}
+        
+        // Pass schema_data ONLY if it exists in DB (to override auto-gen)
+        schema={domain.seo?.schema_data && Object.keys(domain.seo.schema_data).length > 0 ? domain.seo.schema_data : null}
+        
+        // Pass data for auto-generation (SEO component will use this if schema is null)
+        domainData={{
+          name: domain.name,
+          description: seoDescription,
+          image: finalImage,
+          url: currentUrl,
+          price: domain.price,
+          status: domain.status
+        }}
+        
         breadcrumbSchema={breadcrumbSchema}
         ogTitle={seoOgTitle}
       />
       
-      {/* 
-        CRITICAL: Render only ONE set of Structured Data here. 
-        Product and Breadcrumb schemas are handled by SEO component.
-        Organization schema is global/static so rendered here once.
-      */}
+      {/* Organization Schema is global/static so rendered here once */}
       <script type="application/ld+json">
         {JSON.stringify(organizationSchema)}
       </script>

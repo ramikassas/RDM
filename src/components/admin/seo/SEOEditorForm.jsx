@@ -4,49 +4,45 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { Loader2, Save, AlertCircle, Globe, LayoutTemplate, Share2, Type, Info } from 'lucide-react';
+import { Loader2, Save, AlertCircle, Globe, LayoutTemplate, Share2, Type, Info, Code } from 'lucide-react';
 import SEOPreviewSection from './SEOPreviewSection';
 import { useToast } from '@/components/ui/use-toast';
 import { supabase } from '@/lib/customSupabaseClient';
 import { getSupabaseImageUrl } from '@/utils/getSupabaseImageUrl';
+import { generateAutoDescription } from '@/utils/generateAutoDescription';
+import { generateDomainSchema } from '@/utils/schemaGenerator';
 
 const SEOEditorForm = ({ initialData, domainId, domainDescription, onSuccess }) => {
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
+  const [domainInfo, setDomainInfo] = useState(null);
 
   const [formData, setFormData] = useState({
     page_title: initialData?.page_title || '',
-    // meta_description REMOVED - uses domainDescription
     meta_keywords: initialData?.meta_keywords || '',
     h1_title: initialData?.h1_title || '',
     page_heading: initialData?.page_heading || '',
     og_title: initialData?.og_title || '',
-    og_description: initialData?.og_description || '', // kept as optional override if needed in DB, but UI will focus on domain description
+    og_description: initialData?.og_description || '', 
     og_image_url: initialData?.og_image_url || '',
     og_url: initialData?.og_url || '',
     canonical_url: initialData?.canonical_url || '',
     schema_data: initialData?.schema_data ? JSON.stringify(initialData.schema_data, null, 2) : '{}'
   });
 
-  // Log initial data load for debugging
-  useEffect(() => {
-    if (initialData) {
-      console.log('[SEOEditor] Initial Data Loaded:', initialData);
-    }
-  }, [initialData]);
-
-  // Fetch domain info (name, logo) to auto-populate image URL
+  // Fetch complete domain info for auto-schema generation
   useEffect(() => {
     const fetchDomainInfo = async () => {
       if (!domainId) return;
       
       const { data, error } = await supabase
         .from('domains')
-        .select('name, logo_url')
+        .select('name, logo_url, price, status')
         .eq('id', domainId)
         .single();
         
       if (!error && data) {
+        setDomainInfo(data);
         // If image URL is empty, try to prepopulate it with the correct Supabase URL
         if (!formData.og_image_url && data.logo_url) {
           const actualUrl = getSupabaseImageUrl(data.name, data.logo_url);
@@ -66,9 +62,6 @@ const SEOEditorForm = ({ initialData, domainId, domainDescription, onSuccess }) 
     e.preventDefault();
     setLoading(true);
 
-    const timestamp = new Date().toISOString();
-    console.log(`[${timestamp}] [SEOEditor] Starting save operation for domain: ${domainId}`);
-
     try {
       // Validate Image URL
       if (formData.og_image_url && !formData.og_image_url.includes('ahttbqbzhggfdqupfnus.supabase.co')) {
@@ -85,16 +78,13 @@ const SEOEditorForm = ({ initialData, domainId, domainDescription, onSuccess }) 
         throw new Error("Invalid JSON in Schema Data field: " + err.message);
       }
 
-      // Explicitly construct payload - EXCLUDING meta_description
       const payload = {
         domain_id: domainId,
         page_title: formData.page_title,
-        // meta_description: formData.meta_description, // REMOVED
         meta_keywords: formData.meta_keywords,
         h1_title: formData.h1_title,
         page_heading: formData.page_heading,
         og_title: formData.og_title,
-        // og_description: formData.og_description, // Can be kept if we want specific social override, but per task "Update SEOEditorForm... remove Meta Description input"
         og_image_url: formData.og_image_url,
         og_url: formData.og_url,
         canonical_url: formData.canonical_url,
@@ -102,19 +92,11 @@ const SEOEditorForm = ({ initialData, domainId, domainDescription, onSuccess }) 
         updated_at: new Date().toISOString()
       };
 
-      console.log(`[${timestamp}] [SEOEditor] Payload to Supabase:`, payload);
-
-      const { data: resultData, error } = await supabase
+      const { error } = await supabase
         .from('domain_seo_settings')
-        .upsert(payload, { onConflict: 'domain_id' })
-        .select();
+        .upsert(payload, { onConflict: 'domain_id' });
 
-      if (error) {
-        console.error(`[${timestamp}] [SEOEditor] Supabase Error:`, error);
-        throw error;
-      }
-
-      console.log(`[${timestamp}] [SEOEditor] Save Successful. Response Data:`, resultData);
+      if (error) throw error;
 
       toast({
         title: "SEO Settings Saved",
@@ -124,7 +106,6 @@ const SEOEditorForm = ({ initialData, domainId, domainDescription, onSuccess }) 
       if (onSuccess) onSuccess();
 
     } catch (error) {
-      console.error(`[${timestamp}] [SEOEditor] Save Failed Exception:`, error);
       toast({
         variant: "destructive",
         title: "Save Failed",
@@ -135,20 +116,28 @@ const SEOEditorForm = ({ initialData, domainId, domainDescription, onSuccess }) 
     }
   };
 
+  // Generate the auto-schema for display
+  const autoGeneratedSchema = domainInfo ? generateDomainSchema({
+    name: domainInfo.name,
+    description: domainDescription || generateAutoDescription(domainInfo.name),
+    image: formData.og_image_url || getSupabaseImageUrl(domainInfo.name, domainInfo.logo_url),
+    url: formData.og_url || `https://rdm.bz/domain/${domainInfo.name}`,
+    price: domainInfo.price,
+    status: domainInfo.status
+  }) : null;
+
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 h-full">
       {/* Form Section */}
       <div className="space-y-6 overflow-y-auto max-h-[calc(80vh-100px)] pr-2">
         <form id="seo-form" onSubmit={handleSave} className="space-y-6">
           
-          {/* Section 1: Title Management */}
           <div className="space-y-6 border p-4 rounded-lg bg-slate-50">
             <h3 className="font-semibold text-slate-900 border-b pb-2 flex items-center gap-2">
               <Type className="w-4 h-4 text-emerald-600" />
               Title & Identity Management
             </h3>
             
-            {/* 1. Page Title (Meta) */}
             <div className="bg-white p-3 rounded border border-slate-200 shadow-sm space-y-2">
               <div className="flex justify-between items-center">
                 <Label htmlFor="page_title" className="flex items-center gap-2 text-slate-700">
@@ -174,7 +163,6 @@ const SEOEditorForm = ({ initialData, domainId, domainDescription, onSuccess }) 
               </p>
             </div>
 
-            {/* 2. H1 Title (On-Page) */}
             <div className="bg-white p-3 rounded border border-slate-200 shadow-sm space-y-2">
               <div className="flex justify-between items-center">
                 <Label htmlFor="page_heading" className="flex items-center gap-2 text-slate-700">
@@ -191,12 +179,8 @@ const SEOEditorForm = ({ initialData, domainId, domainDescription, onSuccess }) 
                 placeholder="e.g. BrandName.com is for Sale!"
                 className="text-lg font-bold text-slate-800"
               />
-              <p className="text-xs text-slate-500 leading-snug">
-                The main visible heading (&lt;h1&gt;) on the domain detail page. Visitors see this immediately.
-              </p>
             </div>
 
-            {/* 3. OG Title (Social) */}
             <div className="bg-white p-3 rounded border border-slate-200 shadow-sm space-y-2">
               <div className="flex justify-between items-center">
                 <Label htmlFor="og_title" className="flex items-center gap-2 text-slate-700">
@@ -214,16 +198,12 @@ const SEOEditorForm = ({ initialData, domainId, domainDescription, onSuccess }) 
                 onChange={handleChange} 
                 placeholder="Defaults to Page Title if empty"
               />
-              <p className="text-xs text-slate-500 leading-snug">
-                Used specifically when this link is shared on Facebook, Twitter, WhatsApp, etc. Can be different from the Page Title.
-              </p>
             </div>
           </div>
 
           <div className="space-y-4 border p-4 rounded-lg bg-slate-50">
             <h3 className="font-semibold text-slate-900 border-b pb-2">Content & Meta</h3>
             
-            {/* Meta Description Removed - Read Only View */}
             <div className="space-y-2 opacity-75">
               <div className="flex justify-between">
                 <Label className="flex items-center gap-2">
@@ -236,9 +216,6 @@ const SEOEditorForm = ({ initialData, domainId, domainDescription, onSuccess }) 
               <div className="p-3 bg-slate-100 border border-slate-200 rounded text-sm text-slate-600 italic">
                 {domainDescription || "No description set in main inventory."}
               </div>
-              <p className="text-xs text-slate-500">
-                To edit this description, go back to the Domains list and edit the domain details directly.
-              </p>
             </div>
 
             <div className="space-y-2">
@@ -266,9 +243,6 @@ const SEOEditorForm = ({ initialData, domainId, domainDescription, onSuccess }) 
                 onChange={handleChange} 
                 placeholder="Override default URL (optional)"
               />
-              <p className="text-xs text-slate-500">
-                Leave empty to use the default page URL.
-              </p>
             </div>
 
             <div className="space-y-2">
@@ -280,17 +254,8 @@ const SEOEditorForm = ({ initialData, domainId, domainDescription, onSuccess }) 
                 onChange={handleChange} 
                 placeholder="https://ahttbqbzhggfdqupfnus.supabase.co/..."
               />
-              <p className="text-xs text-slate-500">
-                Must be a valid Supabase Storage URL (domain-logos bucket).
-              </p>
-              {formData.og_image_url && !formData.og_image_url.includes('ahttbqbzhggfdqupfnus') && (
-                 <p className="text-xs text-amber-600 font-medium flex items-center gap-1 mt-1">
-                   <AlertCircle className="w-3 h-3" /> Warning: Not a standard Supabase URL.
-                 </p>
-              )}
             </div>
             
-            {/* Hidden fields kept in state for compatibility but not primary UI */}
             <div className="hidden">
                <Input name="h1_title" value={formData.h1_title} onChange={handleChange} />
                <Input name="canonical_url" value={formData.canonical_url} onChange={handleChange} />
@@ -298,17 +263,47 @@ const SEOEditorForm = ({ initialData, domainId, domainDescription, onSuccess }) 
           </div>
 
           <div className="space-y-4 border p-4 rounded-lg bg-slate-50">
-            <h3 className="font-semibold text-slate-900 border-b pb-2">Advanced</h3>
+            <h3 className="font-semibold text-slate-900 border-b pb-2">Schema.org Settings</h3>
+            
+            {/* Manual Schema Override */}
             <div className="space-y-2">
-              <Label htmlFor="schema_data">JSON-LD Schema (JSON)</Label>
+              <Label htmlFor="schema_data" className="flex items-center justify-between">
+                <span>Custom JSON-LD Schema (Override)</span>
+                <span className="text-xs font-normal text-slate-500 bg-slate-100 px-2 py-0.5 rounded">Optional</span>
+              </Label>
               <Textarea 
                 id="schema_data" 
                 name="schema_data" 
                 value={formData.schema_data} 
                 onChange={handleChange} 
                 className="font-mono text-xs"
-                rows={6}
+                rows={4}
+                placeholder="{ ... }"
               />
+              <p className="text-xs text-slate-500">
+                Leave empty to use the auto-generated schema below.
+              </p>
+            </div>
+
+            {/* Auto Generated Read Only View */}
+            <div className="mt-4 pt-4 border-t border-slate-200">
+              <Label className="flex items-center gap-2 mb-2 text-emerald-700">
+                <Code className="w-3.5 h-3.5" /> Auto-generated JSON-LD Schema
+              </Label>
+              <div className="bg-slate-900 rounded-md p-3 overflow-x-auto relative group">
+                 <pre className="text-[10px] leading-relaxed text-emerald-300 font-mono whitespace-pre-wrap">
+                    {autoGeneratedSchema 
+                      ? JSON.stringify(autoGeneratedSchema, null, 2) 
+                      : "// Loading domain data..."}
+                 </pre>
+                 <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <span className="text-[10px] bg-white/10 text-white px-2 py-1 rounded">Read Only</span>
+                 </div>
+              </div>
+              <p className="text-xs text-slate-500 mt-2">
+                This schema is automatically generated from the domain's live data (name, price, status, etc.). 
+                It will be used if the "Custom JSON-LD Schema" field above is empty.
+              </p>
             </div>
           </div>
 
