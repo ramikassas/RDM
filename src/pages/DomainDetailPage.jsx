@@ -40,6 +40,7 @@ import { formatDateOnly } from '@/utils/formatDate';
 import { getSupabaseImageUrl } from '@/utils/getSupabaseImageUrl';
 import { generateAutoDescription } from '@/utils/generateAutoDescription';
 
+// --- Helper Components ---
 const SectionCard = ({ title, icon, children, className = "" }) => (
   <section className={`bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden ${className}`}>
     {(title || icon) && (
@@ -87,34 +88,27 @@ const DomainDetailPage = () => {
     trackPageView();
   }, [domainName]);
 
-  // Fetch Recommended Domains when domain is loaded
   useEffect(() => {
     if (domain) {
       fetchRecommended();
     }
   }, [domain]);
 
-  // Interest Tracking
   useEffect(() => {
     let timer;
     const TRACKING_DELAY = 15000; 
-
     const trackInterest = async () => {
       if (!domain?.id) return;
-
       try {
         const storageKey = `rdm_interest_${domain.id}`;
         if (sessionStorage.getItem(storageKey)) return; 
-
         const ipRes = await fetch('https://api.ipify.org?format=json');
         const ipData = await ipRes.json();
         const ip = ipData.ip;
         if (!ip) return;
-
         const { error } = await supabase
           .from('domain_interest_logs')
           .insert([{ domain_id: domain.id, ip_address: ip, view_duration: 15 }]);
-
         if (!error) {
           sessionStorage.setItem(storageKey, 'true');
           setInterestCount(prev => prev + 1);
@@ -123,7 +117,6 @@ const DomainDetailPage = () => {
         console.error('Tracking error:', err);
       }
     };
-
     if (domain && domain.id) {
        timer = setTimeout(trackInterest, TRACKING_DELAY);
     }
@@ -148,7 +141,6 @@ const DomainDetailPage = () => {
     if (domain) fetchInterestCount();
   }, [domain]);
 
-  // Countdown
   useEffect(() => {
     if (!domain?.registration_date) {
       setTimeLeft(null);
@@ -186,9 +178,7 @@ const DomainDetailPage = () => {
 
   const fetchDomain = async () => {
     setLoading(true);
-    
     try {
-      // 1. Fetch Domain
       const { data: domainData, error: domainError } = await supabase
         .from('domains')
         .select('*')
@@ -201,7 +191,6 @@ const DomainDetailPage = () => {
         return;
       }
 
-      // 2. Fetch SEO Settings (Separately to avoid complex joins in frontend-only env)
       let seoData = null;
       if (domainData) {
         const { data: seo, error: seoError } = await supabase
@@ -209,10 +198,7 @@ const DomainDetailPage = () => {
           .select('*')
           .eq('domain_id', domainData.id)
           .maybeSingle();
-        
-        if (!seoError) {
-          seoData = seo;
-        }
+        if (!seoError) seoData = seo;
       }
 
       if (domainData) {
@@ -229,13 +215,9 @@ const DomainDetailPage = () => {
     setRecLoading(true);
     setRecError(false);
     try {
-      // Fetch a batch to randomly select from
       const { data, error } = await supabase.from('domains').select('*').limit(20);
-      
       if (error) throw error;
-      
       if (data && data.length > 0) {
-        // Shuffle and take 3, excluding current domain
         const shuffled = data.sort(() => 0.5 - Math.random());
         const filtered = shuffled.filter(d => d.name !== domainName).slice(0, 3);
         setRecommended(filtered);
@@ -272,22 +254,10 @@ const DomainDetailPage = () => {
     window.location.href = `${baseUrl}?${params.toString()}`;
   };
 
-  const handleGoDaddyBuy = () => {
-    if (window.gtag) window.gtag('event', 'click_godaddy_buy', { domain_name: domain.name });
-    window.open(`https://godaddy.com/forsale/${domain.name}`, '_blank', 'noopener,noreferrer');
-  };
-
-  const handleMakeOffer = () => {
-    if (window.gtag) window.gtag('event', 'click_make_offer', { domain_name: domain.name });
-    setShowOfferForm(true);
-  };
-
-  const handleWhatsAppContact = () => {
-    if (window.gtag) window.gtag('event', 'click_whatsapp_contact', { domain_name: domain.name });
-    const message = `Is the domain ${domain.name} available?`;
-    window.open(`https://wa.me/905313715417?text=${encodeURIComponent(message)}`, '_blank');
-  };
-
+  const handleGoDaddyBuy = () => window.open(`https://godaddy.com/forsale/${domain.name}`, '_blank', 'noopener,noreferrer');
+  const handleMakeOffer = () => setShowOfferForm(true);
+  const handleWhatsAppContact = () => window.open(`https://wa.me/905313715417?text=${encodeURIComponent(`Is the domain ${domain.name} available?`)}`, '_blank');
+  
   const handleWeb3Redirect = () => {
     const searchTerm = domain.name.toLowerCase().endsWith('.web3') ? domain.name : `${domain.name}.web3`;
     window.open(`https://unstoppabledomains.com/search?searchTerm=${searchTerm}&searchRef=homepage`, '_blank');
@@ -335,22 +305,15 @@ const DomainDetailPage = () => {
   const socialUrl = `https://rdm.bz/domain/${domainName}`;
   const currentUrl = `https://rdm.bz/domain/${domain.name}`;
   
-  // Use new Date Format
   const listedDateDisplay = domain.listed_date ? formatDateOnly(domain.listed_date) : formatDateOnly(domain.created_at);
   const registrationDateDisplay = domain.registration_date ? formatDateOnly(domain.registration_date) : 'N/A';
 
-  // 1. Dynamic Meta Tags
   const seoTitle = domain.seo?.page_title || `${domain.name} - Premium Domain for Sale | RDM`;
-  
-  // 2. Separate Social Title (OG)
   const seoOgTitle = domain.seo?.og_title || seoTitle;
-
-  // 3. Optimized Meta Description - CONDITIONAL LOGIC
   const seoDescription = domain.description && domain.description.trim().length > 0
     ? domain.description
     : generateAutoDescription(domain.name);
 
-  // 4. Keywords
   const seoKeywords = domain.seo?.meta_keywords || [
     `buy ${domain.name}`,
     `purchase ${domain.name}`,
@@ -361,12 +324,9 @@ const DomainDetailPage = () => {
     `${domain.category} domains`
   ].join(', ');
 
-  // 5. Generate Actual Supabase Image URL
   const actualSupabaseUrl = getSupabaseImageUrl(domain.name, domain.logo_url);
   
-  // 6. Custom Image Priority
   let finalImage = null;
-
   if (domain.seo?.og_image_url && domain.seo.og_image_url.trim() !== '') {
     finalImage = domain.seo.og_image_url;
   } else if (actualSupabaseUrl) {
@@ -377,7 +337,6 @@ const DomainDetailPage = () => {
 
   const finalCanonical = domain.seo?.canonical_url || currentUrl;
 
-  // 7. Structured Data (JSON-LD)
   const productSchema = domain.seo?.schema_data && Object.keys(domain.seo.schema_data).length > 0 
     ? domain.seo.schema_data 
     : {
@@ -434,8 +393,6 @@ const DomainDetailPage = () => {
   };
 
   const descriptiveAltText = `${domain.name} logo - premium domain for sale`;
-  
-  // PRIORITY: page_heading (new) -> h1_title (legacy) -> domain.name (fallback)
   const displayH1 = domain.seo?.page_heading || domain.seo?.h1_title || domain.name;
 
   return (
@@ -446,15 +403,21 @@ const DomainDetailPage = () => {
         keywords={seoKeywords}
         type="product"
         image={finalImage}
-        url={currentUrl} // General URL fallback
-        ogUrl={socialUrl} // Dynamic social URL
-        twitterUrl={socialUrl} // Dynamic twitter URL
-        twitterSite="@rami_kassas" // Specific Twitter site
+        url={currentUrl}
+        ogUrl={socialUrl}
+        twitterUrl={socialUrl}
+        twitterSite="@rami_kassas"
         canonicalUrl={finalCanonical}
         schema={productSchema}
         breadcrumbSchema={breadcrumbSchema}
         ogTitle={seoOgTitle}
       />
+      
+      {/* 
+        CRITICAL: Render only ONE set of Structured Data here. 
+        Product and Breadcrumb schemas are handled by SEO component.
+        Organization schema is global/static so rendered here once.
+      */}
       <script type="application/ld+json">
         {JSON.stringify(organizationSchema)}
       </script>
@@ -466,11 +429,10 @@ const DomainDetailPage = () => {
 
           <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
             
-            {/* 1. Header Section */}
+            {/* Header Section */}
             <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 md:p-8 flex flex-col lg:flex-row items-center lg:items-start gap-8 mb-8 relative overflow-hidden">
                <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-50 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 opacity-50 z-0"></div>
                
-               {/* Logo */}
                <div className="shrink-0 relative z-10 w-full lg:w-auto flex justify-center lg:block">
                   {domain.logo_url ? (
                     <DomainLogoDisplay 
@@ -488,7 +450,6 @@ const DomainDetailPage = () => {
                   )}
                </div>
 
-               {/* Info */}
                <div className="flex-1 text-center lg:text-left relative z-10 w-full">
                   <div className="flex flex-wrap items-center justify-center lg:justify-start gap-3 mb-4">
                      {domain.featured && <PremiumBadge variant="default" />}
@@ -504,7 +465,6 @@ const DomainDetailPage = () => {
                       </span>
                   </div>
 
-                  {/* SEO Optimized H1 - Uses page_heading */}
                   <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-black text-slate-900 tracking-tight break-all mb-3 leading-tight">
                     {displayH1}
                     <span className="sr-only"> - Premium Domain for Sale</span>
@@ -514,7 +474,6 @@ const DomainDetailPage = () => {
                   </p>
                </div>
 
-               {/* Price Desktop (Hidden Mobile) */}
                <div className="hidden lg:flex flex-col items-end shrink-0 relative z-10 min-w-[200px]">
                   <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Acquisition Price</p>
                   <div className="text-5xl font-black text-emerald-600 tracking-tight mb-2">${domain.price.toLocaleString()}</div>
@@ -526,10 +485,8 @@ const DomainDetailPage = () => {
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
               
-              {/* Left Column: Main Content */}
               <div className="lg:col-span-2 space-y-8">
                 
-                {/* 2. Domain Info Section (Stats) */}
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                    <StatItem label="Length" value={`${domainLen} Chars`} icon={<BarChart3 className="w-5 h-5" />} />
                    <StatItem label="Extension" value={domain.tld} icon={<Globe className="w-5 h-5" />} />
@@ -537,12 +494,9 @@ const DomainDetailPage = () => {
                    <StatItem label="Est. Value" value="Premium" icon={<TrendingUp className="w-5 h-5" />} />
                 </div>
 
-                {/* Description - UPDATED WITH CONDITIONAL DISPLAY */}
                 <SectionCard title={`Domain Details for ${domain.name}`} icon={<FileText className="w-5 h-5" />}>
                    <div className="prose prose-slate max-w-none text-slate-600 leading-relaxed">
-                      <p>
-                        {seoDescription}
-                      </p>
+                      <p>{seoDescription}</p>
                       <p>
                         Securing <em>{domain.name}</em> instantly provides your business with a credible digital footprint. 
                         Don't miss the opportunity to own this unique digital asset.
@@ -550,7 +504,6 @@ const DomainDetailPage = () => {
                    </div>
                 </SectionCard>
 
-                {/* 3. Technical Specs / DNS Placeholder */}
                 <SectionCard title="Technical Specifications" icon={<Server className="w-5 h-5" />}>
                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-4 gap-x-8">
                       <div className="flex justify-between py-2 border-b border-slate-50">
@@ -587,7 +540,6 @@ const DomainDetailPage = () => {
                    </div>
                 </SectionCard>
 
-                {/* 5. Additional Info (Use Cases & USPs) */}
                 {domain.use_cases && domain.use_cases.length > 0 && (
                    <SectionCard title={`Strategic Applications for ${domain.name}`} icon={<Target className="w-5 h-5" />}>
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -619,16 +571,14 @@ const DomainDetailPage = () => {
                 )}
               </div>
 
-              {/* Right Column: Settings/Actions */}
+              {/* Right Column: Actions */}
               <div className="space-y-6">
                  
-                 {/* Mobile Price (Visible only on Mobile) */}
                  <div className="lg:hidden bg-white rounded-xl shadow-sm border border-slate-200 p-6 text-center">
                     <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Acquisition Price</p>
                     <div className="text-4xl font-black text-emerald-600 mb-2">${domain.price.toLocaleString()}</div>
                  </div>
 
-                 {/* 6. Settings Section (Repurposed as Acquisition Actions) */}
                  <div className="bg-white rounded-2xl shadow-lg shadow-emerald-900/5 border border-emerald-100 p-6 sticky top-24">
                     <h3 className="text-lg font-bold text-slate-900 mb-6 flex items-center gap-2">
                        <CreditCard className="w-5 h-5 text-emerald-600" /> Purchase Options
@@ -665,7 +615,6 @@ const DomainDetailPage = () => {
                        )}
                     </div>
 
-                    {/* Timer */}
                     {timeLeft && timeLeft !== "EXPIRED" && (
                        <div className="mt-6 pt-6 border-t border-slate-100">
                           <div className="flex items-center justify-between text-slate-500 mb-2">
@@ -681,7 +630,6 @@ const DomainDetailPage = () => {
                     )}
                  </div>
 
-                 {/* 4. Analytics Section (Market Demand) */}
                  {interestCount > 0 && (
                     <div className="bg-orange-50 rounded-xl border border-orange-100 p-5 shadow-sm">
                        <div className="flex items-center gap-3 mb-3">
@@ -694,7 +642,6 @@ const DomainDetailPage = () => {
                     </div>
                  )}
                  
-                 {/* Trust Section */}
                  <div className="bg-white rounded-xl border border-slate-200 p-6 space-y-4">
                     <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider mb-2">Buyer Protection</h3>
                     <div className="flex items-center gap-3 text-sm text-slate-600">
@@ -711,12 +658,9 @@ const DomainDetailPage = () => {
                        </Link>
                     </div>
                  </div>
-
               </div>
-
             </div>
 
-             {/* Footer Links */}
             <div className="mt-16 pt-10 border-t border-slate-200">
                <h2 className="text-xl font-bold text-slate-900 mb-6">Explore More</h2>
                <div className="flex flex-wrap gap-4">
@@ -734,7 +678,6 @@ const DomainDetailPage = () => {
                </div>
             </div>
 
-            {/* Recommended Domains Section */}
             <div className="mt-12 pt-10 border-t border-slate-200">
               <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4 mb-8">
                  <div>

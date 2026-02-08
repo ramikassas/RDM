@@ -37,7 +37,7 @@ const SEO = ({
   const constructedUrl = `${baseUrl}${cleanPath}`;
   
   // URL Priorities:
-  // 1. Specific ogUrl/twitterUrl prop
+  // 1. Specific ogUrl/twitterUrl prop (Highest priority for Domain Detail Pages)
   // 2. Generic url prop
   // 3. Constructed URL from window location
   
@@ -62,7 +62,7 @@ const SEO = ({
       <meta name="description" content={finalDescription} />
       {keywords && <meta name="keywords" content={keywords} />}
       
-      {/* CRITICAL: Canonical Link must use the full, correct URL */}
+      {/* Canonical Link */}
       <link rel="canonical" href={finalCanonicalUrl} />
 
       {/* Open Graph */}
