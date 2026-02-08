@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
@@ -324,7 +323,11 @@ const DomainDetailPage = () => {
     `${domain.category} domains`
   ].join(', ');
 
-  const actualSupabaseUrl = getSupabaseImageUrl(domain.name, domain.logo_url);
+  // Calculate image URL for SEO and Display
+  // Check if domain.logo_url is ALREADY a valid absolute URL (starts with http or //)
+  // This prevents getSupabaseImageUrl from double-wrapping an already valid URL
+  const isFullUrl = domain.logo_url && (domain.logo_url.startsWith('http') || domain.logo_url.startsWith('//'));
+  const actualSupabaseUrl = isFullUrl ? domain.logo_url : getSupabaseImageUrl(domain.name, domain.logo_url);
   
   let finalImage = null;
   if (domain.seo?.og_image_url && domain.seo.og_image_url.trim() !== '') {
@@ -419,7 +422,8 @@ const DomainDetailPage = () => {
                   {domain.logo_url ? (
                     <DomainLogoDisplay 
                       logoUrl={domain.logo_url} 
-                      actualImageUrl={actualSupabaseUrl}
+                      // Fixed: Removed actualImageUrl prop which was overriding valid DB URLs with potentially broken generated ones.
+                      // DomainLogoDisplay will now use logoUrl directly, matching the behavior of DomainCard.jsx
                       altText={descriptiveAltText} 
                       domainName={domain.name} 
                       className="mb-0"
