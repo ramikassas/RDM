@@ -19,12 +19,11 @@ const SEO = ({
   const baseUrl = 'https://rdm.bz';
   const siteTitle = "Rare Domains Marketplace (RDM)";
   
-  // Logic for clean metadata
   const finalTitle = title || siteTitle;
   const finalDescription = description || "Rare Domains Marketplace (RDM) is the premier marketplace for rare, premium, and exclusive domain names.";
   const finalImage = image || `${baseUrl}/og-image.png`;
   
-  // Unified URL Logic to prevent canonical mismatch
+  // توحيد الرابط لمنع تعارض الـ Canonical
   const currentPath = location.pathname.endsWith('/') && location.pathname !== '/' 
     ? location.pathname.slice(0, -1) 
     : location.pathname;
@@ -41,10 +40,9 @@ const SEO = ({
       <meta name="description" content={finalDescription} />
       {keywords && <meta name="keywords" content={keywords} />}
       
-      {/* Canonical Link */}
       <link rel="canonical" href={finalUrl} />
 
-      {/* Open Graph / Facebook - Using 'key' to force overwrite */}
+      {/* Open Graph - استخدام key يمنع التكرار */}
       <meta property="og:site_name" content={siteTitle} />
       <meta property="og:title" content={ogTitle || finalTitle} key="og_title" />
       <meta property="og:description" content={finalDescription} key="og_desc" />
@@ -52,7 +50,7 @@ const SEO = ({
       <meta property="og:url" content={finalUrl} key="og_url" />
       <meta property="og:image" content={finalImage} key="og_img" />
       
-      {/* Twitter - Using 'key' to force overwrite */}
+      {/* Twitter */}
       <meta name="twitter:card" content="summary_large_image" />
       <meta name="twitter:site" content={twitterSite} />
       <meta name="twitter:title" content={finalTitle} key="tw_title" />
@@ -60,7 +58,6 @@ const SEO = ({
       <meta name="twitter:image" content={finalImage} key="tw_img" />
       <meta name="twitter:url" content={finalUrl} key="tw_url" />
 
-      {/* Structured Data */}
       {schemasToRender.map((s, index) => (
         <script key={`schema-${index}`} type="application/ld+json">
           {JSON.stringify(s)}
