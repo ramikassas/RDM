@@ -332,6 +332,7 @@ const DomainDetailPage = () => {
   const domainLen = domain.name.split('.')[0].length;
 
   // --- SEO OPTIMIZATION LOGIC ---
+  const socialUrl = `https://rdm.bz/domain/${domainName}`;
   const currentUrl = `https://rdm.bz/domain/${domain.name}`;
   
   // Use new Date Format
@@ -344,9 +345,7 @@ const DomainDetailPage = () => {
   // 2. Separate Social Title (OG)
   const seoOgTitle = domain.seo?.og_title || seoTitle;
 
-  // 3. Optimized Meta Description - CONDITIONAL LOGIC (Updated Task 2 & 3)
-  // Logic: If domain.description is present, use it exclusively.
-  // If not, use generated auto description.
+  // 3. Optimized Meta Description - CONDITIONAL LOGIC
   const seoDescription = domain.description && domain.description.trim().length > 0
     ? domain.description
     : generateAutoDescription(domain.name);
@@ -377,7 +376,6 @@ const DomainDetailPage = () => {
   }
 
   const finalCanonical = domain.seo?.canonical_url || currentUrl;
-  const finalOgUrl = domain.seo?.og_url || currentUrl;
 
   // 7. Structured Data (JSON-LD)
   const productSchema = domain.seo?.schema_data && Object.keys(domain.seo.schema_data).length > 0 
@@ -386,7 +384,7 @@ const DomainDetailPage = () => {
       "@context": "https://schema.org",
       "@type": "Product",
       "name": domain.name,
-      "description": seoDescription, // Uses the same conditional description
+      "description": seoDescription,
       "image": finalImage,
       "url": currentUrl,
       "sku": domain.name,
@@ -444,11 +442,14 @@ const DomainDetailPage = () => {
     <>
       <SEO 
         title={seoTitle}
-        description={seoDescription} // Updated description source
+        description={seoDescription} 
         keywords={seoKeywords}
         type="product"
         image={finalImage}
-        url={finalOgUrl}
+        url={currentUrl} // General URL fallback
+        ogUrl={socialUrl} // Dynamic social URL
+        twitterUrl={socialUrl} // Dynamic twitter URL
+        twitterSite="@rami_kassas" // Specific Twitter site
         canonicalUrl={finalCanonical}
         schema={productSchema}
         breadcrumbSchema={breadcrumbSchema}
