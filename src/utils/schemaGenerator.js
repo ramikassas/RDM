@@ -1,15 +1,26 @@
 
 /**
- * Generates a standard JSON-LD Product schema for a domain.
+ * Helper to validate/fix absolute URLs
+ */
+const ensureAbsoluteUrl = (url) => {
+  if (!url) return '';
+  if (url.startsWith('http')) return url;
+  if (url.startsWith('/')) return `https://rdm.bz${url}`;
+  return `https://rdm.bz/${url}`;
+};
+
+/**
+ * Generates a standard JSON-LD Product schema for a domain with strict validation.
  * @param {Object} data - The domain data
- * @param {string} data.name - Domain name
+ * @param {string} data.name - Domain name (Required)
  * @param {string} [data.description] - Description of the domain
  * @param {string} [data.image] - URL to the domain logo or social image
  * @param {string} [data.url] - Canonical URL of the domain detail page
  * @param {number} [data.price] - Price of the domain
  * @param {string} [data.status] - Status (available, sold, etc.)
  * @param {string} [data.currency] - Currency code (default: USD)
- * @returns {Object} JSON-LD Schema object
+ * @param {string} [data.category] - Domain category
+ * @returns {Object} JSON-LD Schema object or null if invalid
  */
 export const generateDomainSchema = ({
   name,
@@ -18,45 +29,70 @@ export const generateDomainSchema = ({
   url,
   price,
   status = 'available',
-  currency = 'USD'
+  currency = 'USD',
+  category = 'Domain Names'
 }) => {
   if (!name) return null;
 
-  // Fallbacks
-  const schemaDescription = description || `Premium domain name ${name} is available for sale. Secure this digital asset today.`;
-  const schemaImage = image || 'https://rdm.bz/og-image.png';
-  const schemaUrl = url || `https://rdm.bz/domain/${name}`;
+  // 1. Strict Data Preparation
+  const cleanName = name.trim();
+  const cleanDescription = (description || `Premium domain name ${cleanName} is available for sale.`).replace(/"/g, '&quot;');
   
-  const isAvailable = status === 'available';
+  // Ensure absolute URLs
+  const cleanImage = image ? ensureAbsoluteUrl(image) : 'https://rdm.bz/og-image.png';
+  const cleanUrl = url ? ensureAbsoluteUrl(url) : `https://rdm.bz/domain/${cleanName}`;
 
+  // Price validation: strictly numeric string, no currency symbols
+  let cleanPrice = "0";
+  if (price !== undefined && price !== null) {
+      // Remove $ or , if accidentally passed as string
+      cleanPrice = String(price).replace(/[^0-9.]/g, '');
+      if (isNaN(parseFloat(cleanPrice))) cleanPrice = "0";
+  }
+
+  // Availability mapping
+  // If domain.status === "available": set availability to "https://schema.org/InStock"
+  // If domain.status === "sold": set availability to "https://schema.org/SoldOut"
+  // If domain.status === "pending": set availability to "https://schema.org/PreOrder"
+  // Default to "https://schema.org/InStock" for any other status
+  let cleanAvailability = 'https://schema.org/InStock';
+  const statusLower = status?.toLowerCase();
+
+  if (statusLower === 'sold') {
+    cleanAvailability = 'https://schema.org/SoldOut';
+  } else if (statusLower === 'pending') {
+    cleanAvailability = 'https://schema.org/PreOrder';
+  }
+
+  // 2. Schema Construction - SINGLE CLEAN PRODUCT SCHEMA
   const schema = {
     "@context": "https://schema.org",
     "@type": "Product",
-    "name": name,
-    "description": schemaDescription,
-    "image": schemaImage,
-    "url": schemaUrl,
-    "sku": name,
-    "category": "Domain Names",
+    "name": cleanName,
+    "description": cleanDescription,
+    "image": cleanImage,
+    "url": cleanUrl,
+    "sku": cleanName,
+    "brand": {
+      "@type": "Brand",
+      "name": cleanName
+    },
+    "category": category || "Domain Names",
     "offers": {
       "@type": "Offer",
-      "priceCurrency": currency,
-      "price": price,
+      "priceCurrency": currency || "USD",
+      "price": cleanPrice,
       "itemCondition": "https://schema.org/NewCondition",
-      "availability": isAvailable ? "https://schema.org/InStock" : "https://schema.org/OutOfStock",
+      "availability": cleanAvailability,
+      "url": cleanUrl,
       "seller": {
         "@type": "Organization",
         "name": "Rare Domains Marketplace (RDM)",
-        "url": "https://rdm.bz"
+        "url": "https://rdm.bz",
+        "logo": "https://rdm.bz/logo.png"
       }
     }
   };
-
-  // Include top-level price properties for broader compatibility
-  if (price !== undefined && price !== null) {
-    schema.price = price;
-    schema.priceCurrency = currency;
-  }
 
   return schema;
 };

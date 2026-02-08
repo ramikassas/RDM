@@ -1,10 +1,11 @@
+
 import React, { useState } from 'react';
 import { Mail, Phone, MapPin, Send, MessageSquare } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/use-toast';
 import { supabase } from '@/lib/customSupabaseClient';
-import SEOHead from '@/components/SEOHead';
+import SEO from '@/components/SEO';
 import { usePageSEO } from '@/hooks/usePageSEO';
 import Breadcrumbs from '@/components/Breadcrumbs';
 
@@ -65,7 +66,9 @@ const ContactPage = () => {
       "@type": "ContactPoint",
       "telephone": "+905313715417", 
       "contactType": "customer service",
-      "email": "info@rdm.bz"
+      "email": "info@rdm.bz",
+      "areaServed": "Worldwide",
+      "availableLanguage": "English"
     }
   };
 
@@ -74,11 +77,10 @@ const ContactPage = () => {
 
   return (
     <>
-      <SEOHead 
-        seoData={seoData}
-        defaultTitle="Contact Us | Rare Domains Marketplace (RDM)" 
-        defaultDescription="Get in touch with our team. Have questions about premium domains? Contact us for support, inquiries, or partnership opportunities."
-        defaultKeywords="contact RDM, rare domains support, premium domain inquiry, RDM customer service"
+      <SEO 
+        title={seoData?.meta_title || "Contact Us - Rare Domains Marketplace (RDM)"}
+        description={seoData?.meta_description || "Get in touch with our team. Have questions about premium domains? Contact us for support, inquiries, or partnership opportunities."}
+        keywords={seoData?.meta_keywords || "contact RDM, rare domains support, premium domain inquiry, RDM customer service"}
         schema={contactSchema}
       />
 
@@ -86,12 +88,7 @@ const ContactPage = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-12">
           <Breadcrumbs items={[{ label: 'Contact Us', path: null }]} />
 
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5 }}
-            className="text-center mb-12"
-          >
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }} className="text-center mb-12">
             <h1 className="text-4xl md:text-5xl font-black text-slate-900 mb-4">
               {pageTitle}
             </h1>
@@ -102,12 +99,7 @@ const ContactPage = () => {
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16">
             {/* Contact Information */}
-            <motion.div
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.5, delay: 0.2 }}
-              className="bg-white rounded-3xl p-8 md:p-10 border border-slate-100 shadow-lg"
-            >
+            <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.5, delay: 0.2 }} className="bg-white rounded-3xl p-8 md:p-10 border border-slate-100 shadow-lg">
               <h2 className="text-2xl font-bold text-slate-900 mb-6 flex items-center">
                 <MessageSquare className="h-6 w-6 text-emerald-600 mr-3" />
                 Reach Out Directly
@@ -145,75 +137,34 @@ const ContactPage = () => {
             </motion.div>
 
             {/* Contact Form */}
-            <motion.div
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.5, delay: 0.3 }}
-              className="bg-white rounded-3xl p-8 md:p-10 border border-slate-100 shadow-lg"
-            >
+            <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.5, delay: 0.3 }} className="bg-white rounded-3xl p-8 md:p-10 border border-slate-100 shadow-lg">
               <h2 className="text-2xl font-bold text-slate-900 mb-6">Send Us a Message</h2>
               <form onSubmit={handleSubmit} className="space-y-6">
                 <div>
                   <label htmlFor="name" className="block text-sm font-medium text-slate-700 mb-2">
                     Your Name
                   </label>
-                  <input
-                    type="text"
-                    id="name"
-                    name="name"
-                    value={formData.name}
-                    onChange={handleChange}
-                    className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-emerald-500 focus:border-emerald-500 bg-slate-50 text-slate-900"
-                    required
-                  />
+                  <input type="text" id="name" name="name" value={formData.name} onChange={handleChange} className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-emerald-500 focus:border-emerald-500 bg-slate-50 text-slate-900" required />
                 </div>
                 <div>
                   <label htmlFor="email" className="block text-sm font-medium text-slate-700 mb-2">
                     Your Email
                   </label>
-                  <input
-                    type="email"
-                    id="email"
-                    name="email"
-                    value={formData.email}
-                    onChange={handleChange}
-                    className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-emerald-500 focus:border-emerald-500 bg-slate-50 text-slate-900"
-                    required
-                  />
+                  <input type="email" id="email" name="email" value={formData.email} onChange={handleChange} className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-emerald-500 focus:border-emerald-500 bg-slate-50 text-slate-900" required />
                 </div>
                 <div>
                   <label htmlFor="subject" className="block text-sm font-medium text-slate-700 mb-2">
                     Subject
                   </label>
-                  <input
-                    type="text"
-                    id="subject"
-                    name="subject"
-                    value={formData.subject}
-                    onChange={handleChange}
-                    className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-emerald-500 focus:border-emerald-500 bg-slate-50 text-slate-900"
-                    required
-                  />
+                  <input type="text" id="subject" name="subject" value={formData.subject} onChange={handleChange} className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-emerald-500 focus:border-emerald-500 bg-slate-50 text-slate-900" required />
                 </div>
                 <div>
                   <label htmlFor="message" className="block text-sm font-medium text-slate-700 mb-2">
                     Your Message
                   </label>
-                  <textarea
-                    id="message"
-                    name="message"
-                    rows="5"
-                    value={formData.message}
-                    onChange={handleChange}
-                    className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-emerald-500 focus:border-emerald-500 bg-slate-50 text-slate-900"
-                    required
-                  ></textarea>
+                  <textarea id="message" name="message" rows="5" value={formData.message} onChange={handleChange} className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-emerald-500 focus:border-emerald-500 bg-slate-50 text-slate-900" required></textarea>
                 </div>
-                <Button
-                  type="submit"
-                  className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 text-lg rounded-xl transition-transform active:scale-[0.99]"
-                  disabled={isSubmitting}
-                >
+                <Button type="submit" className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 text-lg rounded-xl transition-transform active:scale-[0.99]" disabled={isSubmitting}>
                   {isSubmitting ? 'Sending...' : (
                     <>
                       <Send className="h-5 w-5 mr-2" />

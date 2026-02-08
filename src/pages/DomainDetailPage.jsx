@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
@@ -38,6 +39,8 @@ import DomainCard from '@/components/DomainCard';
 import { formatDateOnly } from '@/utils/formatDate';
 import { getSupabaseImageUrl } from '@/utils/getSupabaseImageUrl';
 import { generateAutoDescription } from '@/utils/generateAutoDescription';
+import { generateSmartTitle } from '@/utils/generateSmartTitle';
+import { generateDomainSchema } from '@/utils/schemaGenerator'; // Import purely for validation logging
 
 // --- Helper Components ---
 const SectionCard = ({ title, icon, children, className = "" }) => (
@@ -307,7 +310,11 @@ const DomainDetailPage = () => {
   const listedDateDisplay = domain.listed_date ? formatDateOnly(domain.listed_date) : formatDateOnly(domain.created_at);
   const registrationDateDisplay = domain.registration_date ? formatDateOnly(domain.registration_date) : 'N/A';
 
-  const seoTitle = domain.seo?.page_title || `${domain.name} - Premium Domain for Sale | RDM`;
+  // 1. Generate Smart Title using Utility
+  const smartTitle = generateSmartTitle(domain.name, domain.category, domain.tld);
+
+  // 2. Fallback Priority: Manual SEO Title -> Smart Title -> Basic Fallback
+  const seoTitle = domain.seo?.page_title || smartTitle;
   const seoOgTitle = domain.seo?.og_title || seoTitle;
   const seoDescription = domain.description && domain.description.trim().length > 0
     ? domain.description
@@ -323,9 +330,6 @@ const DomainDetailPage = () => {
     `${domain.category} domains`
   ].join(', ');
 
-  // Calculate image URL for SEO and Display
-  // Check if domain.logo_url is ALREADY a valid absolute URL (starts with http or //)
-  // This prevents getSupabaseImageUrl from double-wrapping an already valid URL
   const isFullUrl = domain.logo_url && (domain.logo_url.startsWith('http') || domain.logo_url.startsWith('//'));
   const actualSupabaseUrl = isFullUrl ? domain.logo_url : getSupabaseImageUrl(domain.name, domain.logo_url);
   
@@ -369,7 +373,25 @@ const DomainDetailPage = () => {
   };
 
   const descriptiveAltText = `${domain.name} logo - premium domain for sale`;
-  const displayH1 = domain.seo?.page_heading || domain.seo?.h1_title || domain.name;
+  const displayH1 = domain.seo?.h1_title || seoTitle.split('|')[0].trim(); // Use the optimized title without site suffix for H1 if not set
+  
+  // Debug Logging for Schema Verification
+  if (domain) {
+    const debugSchema = generateDomainSchema({
+        name: domain.name,
+        description: seoDescription,
+        image: finalImage,
+        url: currentUrl,
+        price: domain.price,
+        status: domain.status,
+        category: domain.category
+    });
+    console.group('🔍 SEO SCHEMA DEBUG');
+    console.log('✅ Generated Product Schema:', debugSchema);
+    console.log('📦 Offers structure valid?', debugSchema.offers['@type'] === 'Offer');
+    console.log('🔗 URL absolute?', debugSchema.url.startsWith('http'));
+    console.groupEnd();
+  }
 
   return (
     <>
@@ -385,24 +407,23 @@ const DomainDetailPage = () => {
         twitterSite="@rami_kassas"
         canonicalUrl={finalCanonical}
         
-        // Pass schema_data ONLY if it exists in DB (to override auto-gen)
+        // Pass schema_data from DB if it exists, but ensure we don't duplicate Product if we're auto-generating it
         schema={domain.seo?.schema_data && Object.keys(domain.seo.schema_data).length > 0 ? domain.seo.schema_data : null}
         
-        // Pass data for auto-generation (SEO component will use this if schema is null)
         domainData={{
           name: domain.name,
           description: seoDescription,
           image: finalImage,
           url: currentUrl,
           price: domain.price,
-          status: domain.status
+          status: domain.status,
+          category: domain.category
         }}
         
         breadcrumbSchema={breadcrumbSchema}
         ogTitle={seoOgTitle}
       />
       
-      {/* Organization Schema is global/static so rendered here once */}
       <script type="application/ld+json">
         {JSON.stringify(organizationSchema)}
       </script>
@@ -422,8 +443,6 @@ const DomainDetailPage = () => {
                   {domain.logo_url ? (
                     <DomainLogoDisplay 
                       logoUrl={domain.logo_url} 
-                      // Fixed: Removed actualImageUrl prop which was overriding valid DB URLs with potentially broken generated ones.
-                      // DomainLogoDisplay will now use logoUrl directly, matching the behavior of DomainCard.jsx
                       altText={descriptiveAltText} 
                       domainName={domain.name} 
                       className="mb-0"

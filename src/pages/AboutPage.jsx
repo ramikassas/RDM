@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Shield, TrendingUp, Users, Award, Twitter, ArrowRight, Globe, Server } from 'lucide-react';
 import { motion } from 'framer-motion';
@@ -15,15 +16,17 @@ const AboutPage = () => {
       "name": "Rare Domains Marketplace (RDM)",
       "founder": "Rami Kassas",
       "description": "Rare Domains Marketplace (RDM) is a premium domain marketplace connecting visionaries with exclusive digital assets.",
-      "url": "https://rdm.bz"
+      "url": "https://rdm.bz",
+      "logo": "https://rdm.bz/logo.png"
     }
   };
 
   return (
     <>
       <SEO 
-        title="About Rare Domains Marketplace (RDM)" 
-        description="Learn about our premium domain marketplace. Discover our mission to connect buyers with valuable domain names and support digital entrepreneurship."
+        title="About Rare Domains Marketplace (RDM) - Our Mission" 
+        description="Learn about RDM's mission to connect buyers with valuable domain names. We specialize in premium, rare, and brandable domains for forward-thinking businesses."
+        keywords="about RDM, premium domain marketplace, domain investing, rare domains, digital assets team"
         schema={aboutSchema}
       />
 
@@ -32,11 +35,7 @@ const AboutPage = () => {
         <section className="bg-white border-b border-slate-100">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 md:py-28">
             <div className="max-w-3xl mx-auto text-center">
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.6 }}
-              >
+              <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }}>
                 <h1 className="text-4xl md:text-6xl font-black text-slate-900 mb-6 leading-tight">
                   Redefining Digital <span className="text-emerald-600">Asset Acquisition</span>
                 </h1>
@@ -54,11 +53,7 @@ const AboutPage = () => {
 
           {/* Mission & Values Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-12 lg:gap-20 my-20 items-center">
-            <motion.div 
-              initial={{ opacity: 0, x: -20 }}
-              whileInView={{ opacity: 1, x: 0 }}
-              viewport={{ once: true }}
-            >
+            <motion.div initial={{ opacity: 0, x: -20 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true }}>
               <h2 className="text-3xl md:text-4xl font-bold text-slate-900 mb-6">Our Mission</h2>
               <div className="prose prose-lg text-slate-600">
                 <p className="mb-4">
@@ -80,12 +75,7 @@ const AboutPage = () => {
               </div>
             </motion.div>
             
-            <motion.div
-               initial={{ opacity: 0, x: 20 }}
-               whileInView={{ opacity: 1, x: 0 }}
-               viewport={{ once: true }}
-               className="relative"
-            >
+            <motion.div initial={{ opacity: 0, x: 20 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true }} className="relative">
               <div className="absolute inset-0 bg-gradient-to-tr from-emerald-100 to-blue-50 rounded-3xl transform rotate-3"></div>
               <div className="relative bg-white rounded-3xl p-8 shadow-xl border border-slate-100">
                 <h3 className="text-xl font-bold text-slate-900 mb-6">What Sets Us Apart</h3>
@@ -131,11 +121,11 @@ const AboutPage = () => {
 
                 <div className="relative z-10 flex flex-col md:flex-row gap-10 items-center">
                    <div className="w-full md:w-1/3">
-                      <div className="relative w-48 h-64 md:w-56 md:h-72 mx-auto md:ml-0 overflow-hidden rounded-2xl border border-slate-700 shadow-2xl"> {/* Adjusted dimensions */}
+                      <div className="relative w-48 h-64 md:w-56 md:h-72 mx-auto md:ml-0 overflow-hidden rounded-2xl border border-slate-700 shadow-2xl"> 
                         <img 
                           src="https://horizons-cdn.hostinger.com/ee7df4d6-7fd2-45d0-8d5a-3495011e4290/6f612353b77a278934c95261de52dc7a.png"
                           alt="Rami Kassas - Founder"
-                          className="w-full h-full object-cover object-top" // object-top to ensure head is visible
+                          className="w-full h-full object-cover object-top" 
                         />
                         <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/90 to-transparent p-6">
                           <p className="font-bold text-lg">Rami Kassas</p>

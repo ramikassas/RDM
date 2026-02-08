@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from '@/components/ui/toaster';
@@ -37,7 +38,7 @@ import AdminSettings from '@/pages/admin/AdminSettings';
 import AdminPages from '@/pages/admin/AdminPages';
 import DataMigration from '@/pages/admin/DataMigration';
 import SEOManagerPage from '@/pages/admin/SEOManagerPage';
-import FixSEOImages from '@/pages/admin/FixSEOImages'; // New import
+import FixSEOImages from '@/pages/admin/FixSEOImages';
 
 // Wrapper for Public Layout
 const PublicLayout = ({ children }) => (
@@ -62,7 +63,7 @@ function App() {
         <Router>
           <ScrollToTop />
           <Routes>
-            {/* SITEMAP GENERATION - Single route serving pure XML via DOM replacement */}
+            {/* SITEMAP GENERATION - Delegated to Edge Function via Handler */}
             <Route path="/sitemap.xml" element={<SitemapHandler />} />
 
             {/* Public Routes */}
