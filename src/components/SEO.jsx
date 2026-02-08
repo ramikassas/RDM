@@ -14,7 +14,7 @@ const SEO = ({
   url,
   ogUrl,
   twitterUrl,
-  twitterSite = '@rdm_bz',
+  twitterSite = '@rami_kassas',
   canonicalUrl,
   schema,
   breadcrumbSchema,
