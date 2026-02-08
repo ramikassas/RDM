@@ -39,7 +39,7 @@ import DomainCard from '@/components/DomainCard';
 import { formatDateOnly } from '@/utils/formatDate';
 
 const SectionCard = ({ title, icon, children, className = "" }) => (
-  <div className={`bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden ${className}`}>
+  <section className={`bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden ${className}`}>
     {(title || icon) && (
       <div className="px-6 py-4 border-b border-slate-100 flex items-center gap-2 bg-slate-50/50">
         {icon && <span className="text-emerald-600">{icon}</span>}
@@ -49,7 +49,7 @@ const SectionCard = ({ title, icon, children, className = "" }) => (
     <div className="p-6">
       {children}
     </div>
-  </div>
+  </section>
 );
 
 const StatItem = ({ label, value, icon }) => (
@@ -185,8 +185,6 @@ const DomainDetailPage = () => {
   const fetchDomain = async () => {
     setLoading(true);
     
-    console.log(`Fetching domain details for: ${domainName}`);
-    
     try {
       const { data, error } = await supabase
         .from('domains')
@@ -202,7 +200,6 @@ const DomainDetailPage = () => {
 
       if (data) {
         setDomain(data);
-        console.log('Full domain data loaded.');
       }
     } catch (err) {
       console.error('Unexpected error in fetchDomain:', err);
@@ -322,47 +319,84 @@ const DomainDetailPage = () => {
   const listedDateDisplay = domain.listed_date ? formatDateOnly(domain.listed_date) : formatDateOnly(domain.created_at);
   const registrationDateDisplay = domain.registration_date ? formatDateOnly(domain.registration_date) : 'N/A';
 
-  const seoTitle = `Buy ${domain.name} - Premium Domain Name Purchase`;
-  const seoDescription = domain.description 
-    ? `${domain.description.substring(0, 150)}... Buy ${domain.name} now.` 
-    : `Secure ${domain.name} today. Premium ${domain.category} domain available for immediate transfer. One-time purchase price of $${domain.price}.`;
+  // --- SEO OPTIMIZATION LOGIC ---
 
+  // 1. Dynamic Meta Tags
+  const seoTitle = `${domain.name} - Premium Domain for Sale | RDM`;
+  
+  // 2. Optimized Meta Description
+  const seoDescription = domain.description 
+    ? `Buy ${domain.name} today. ${domain.description.substring(0, 100)}... Premium ${domain.category} domain available for immediate transfer. Price: $${domain.price.toLocaleString()}. Secure transaction via RDM.`
+    : `Buy ${domain.name} today. This premium ${domain.category} domain is available for sale. Price: $${domain.price.toLocaleString()}. Secure escrow and fast transfer available.`;
+
+  // 3. Keywords
   const transactionalKeywords = [
     `buy ${domain.name}`,
     `purchase ${domain.name}`,
+    `${domain.name} price`,
+    `${domain.name} for sale`,
     "premium domain purchase",
-    "one-time purchase"
+    "digital asset investment",
+    `${domain.category} domains`
   ].join(', ');
 
+  // 4. Structured Data (JSON-LD)
+  
+  // Product Schema
   const productSchema = {
     "@context": "https://schema.org",
     "@type": "Product",
     "name": domain.name,
-    "description": domain.description || `Premium domain name ${domain.name} for sale.`,
+    "description": seoDescription,
     "image": domain.logo_url || "https://rdm.bz/og-image.png",
     "url": currentUrl,
     "sku": domain.name,
+    "category": domain.category,
     "offers": {
       "@type": "Offer",
       "priceCurrency": "USD",
       "price": domain.price,
+      "itemCondition": "https://schema.org/NewCondition",
       "availability": domain.status === 'available' ? "https://schema.org/InStock" : "https://schema.org/OutOfStock",
       "seller": {
         "@type": "Organization",
-        "name": "Rare Domains Marketplace (RDM)"
+        "name": "Rare Domains Marketplace (RDM)",
+        "url": "https://rdm.bz"
       }
     }
   };
 
+  // Breadcrumb Schema
   const breadcrumbSchema = {
     "@context": "https://schema.org",
     "@type": "BreadcrumbList",
     "itemListElement": [{
-      "@type": "ListItem", "position": 1, "name": "Marketplace", "item": "https://rdm.bz/marketplace"
+      "@type": "ListItem", 
+      "position": 1, 
+      "name": "Marketplace", 
+      "item": "https://rdm.bz/marketplace"
     },{
-      "@type": "ListItem", "position": 2, "name": domain.name, "item": currentUrl
+      "@type": "ListItem", 
+      "position": 2, 
+      "name": domain.name, 
+      "item": currentUrl
     }]
   };
+
+  // Organization Schema (Website Context)
+  const organizationSchema = {
+    "@context": "https://schema.org",
+    "@type": "Organization",
+    "name": "Rare Domains Marketplace",
+    "url": "https://rdm.bz",
+    "logo": "https://rdm.bz/logo.png", // Assuming default logo
+    "sameAs": [
+       "https://twitter.com/raredomains",
+       "https://facebook.com/raredomains"
+    ]
+  };
+
+  const descriptiveAltText = `${domain.name} logo - premium domain for sale`;
 
   return (
     <>
@@ -376,6 +410,10 @@ const DomainDetailPage = () => {
         breadcrumbSchema={breadcrumbSchema}
         canonicalUrl={currentUrl}
       />
+      {/* Inject Organization Schema separately if needed, or rely on global layout */}
+      <script type="application/ld+json">
+        {JSON.stringify(organizationSchema)}
+      </script>
 
       <div className="min-h-screen bg-slate-50 font-sans pb-16">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 md:py-12">
@@ -393,7 +431,7 @@ const DomainDetailPage = () => {
                   {domain.logo_url ? (
                     <DomainLogoDisplay 
                       logoUrl={domain.logo_url} 
-                      altText={domain.logo_alt_text} 
+                      altText={descriptiveAltText} 
                       domainName={domain.name} 
                       className="mb-0"
                       imageClassName="max-h-[160px] max-w-[280px]"
@@ -421,8 +459,10 @@ const DomainDetailPage = () => {
                       </span>
                   </div>
 
+                  {/* SEO Optimized H1 */}
                   <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-black text-slate-900 tracking-tight break-all mb-3 leading-tight">
                     {domain.name}
+                    <span className="sr-only"> - Premium Domain for Sale</span>
                   </h1>
                   <p className="text-lg text-slate-500 font-medium max-w-2xl mx-auto lg:mx-0 leading-relaxed">
                     {domain.tagline || `The perfect digital address for your next big venture in ${domain.category}.`}
@@ -453,9 +493,16 @@ const DomainDetailPage = () => {
                 </div>
 
                 {/* Description */}
-                <SectionCard title="Asset Overview" icon={<FileText className="w-5 h-5" />}>
+                <SectionCard title={`Domain Details for ${domain.name}`} icon={<FileText className="w-5 h-5" />}>
                    <div className="prose prose-slate max-w-none text-slate-600 leading-relaxed">
-                      <p>{domain.description || `Acquire ${domain.name}, a premium domain name now available for purchase. This asset offers brevity, memorability, and authority in the ${domain.category} space.`}</p>
+                      <p>
+                        <strong>{domain.name}</strong> is a high-value, premium domain name now available for acquisition. 
+                        {domain.description || ` Ideally suited for a forward-thinking ${domain.category} brand, this asset offers brevity, memorability, and authority.`}
+                      </p>
+                      <p>
+                        Securing <em>{domain.name}</em> instantly provides your business with a credible digital footprint. 
+                        Don't miss the opportunity to own this unique digital asset.
+                      </p>
                    </div>
                 </SectionCard>
 
@@ -498,7 +545,7 @@ const DomainDetailPage = () => {
 
                 {/* 5. Additional Info (Use Cases & USPs) */}
                 {domain.use_cases && domain.use_cases.length > 0 && (
-                   <SectionCard title="Strategic Applications" icon={<Target className="w-5 h-5" />}>
+                   <SectionCard title={`Strategic Applications for ${domain.name}`} icon={<Target className="w-5 h-5" />}>
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         {domain.use_cases.map((useCase, index) => (
                           <div key={index} className="flex items-start gap-3 p-3 rounded-lg bg-slate-50 border border-slate-100 hover:border-emerald-200 transition-colors">
@@ -514,7 +561,7 @@ const DomainDetailPage = () => {
                   <div className="bg-slate-900 rounded-2xl p-8 text-white relative overflow-hidden shadow-lg">
                     <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-600/20 rounded-full blur-3xl -mt-10 -mr-10"></div>
                     <div className="relative z-10">
-                       <h3 className="text-xl font-bold mb-6 flex items-center gap-2"><ShieldCheck className="w-6 h-6 text-emerald-400" /> Investment Highlights</h3>
+                       <h3 className="text-xl font-bold mb-6 flex items-center gap-2"><ShieldCheck className="w-6 h-6 text-emerald-400" /> Why Choose {domain.name}?</h3>
                        <div className="grid gap-4">
                           {domain.usp_points.map((point, index) => (
                              <div key={index} className="flex gap-4">

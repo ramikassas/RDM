@@ -123,6 +123,10 @@ const AdminDomains = () => {
       if (error) throw error;
 
       toast({ title: "Success", description: `Domain ${editingId ? 'updated' : 'added'} successfully.` });
+      // We do NOT close modal here automatically if just creating, to allow adding logo
+      // But typically we might. For now, let's close it to be simple, or user can re-open.
+      // Actually, standard behavior is close. But if we want them to add logo immediately, we might keep it open.
+      // Let's stick to existing behavior: Close modal.
       setIsModalOpen(false);
       fetchDomains();
       return newId;
@@ -196,6 +200,7 @@ const AdminDomains = () => {
       if (error) {
         toast({ variant: "destructive", title: "Error", description: "Failed to save logo details to domain." });
       } else {
+        // Optimistic update or refetch
         fetchDomains();
       }
     }
