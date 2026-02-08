@@ -38,6 +38,7 @@ import DomainLogoDisplay from '@/components/DomainLogoDisplay';
 import DomainCard from '@/components/DomainCard';
 import { formatDateOnly } from '@/utils/formatDate';
 import { getSupabaseImageUrl } from '@/utils/getSupabaseImageUrl';
+import { generateAutoDescription } from '@/utils/generateAutoDescription';
 
 const SectionCard = ({ title, icon, children, className = "" }) => (
   <section className={`bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden ${className}`}>
@@ -343,10 +344,12 @@ const DomainDetailPage = () => {
   // 2. Separate Social Title (OG)
   const seoOgTitle = domain.seo?.og_title || seoTitle;
 
-  // 3. Optimized Meta Description - EXCLUSIVELY FROM domain.description
-  const seoDescription = domain.description 
+  // 3. Optimized Meta Description - CONDITIONAL LOGIC (Updated Task 2 & 3)
+  // Logic: If domain.description is present, use it exclusively.
+  // If not, use generated auto description.
+  const seoDescription = domain.description && domain.description.trim().length > 0
     ? domain.description
-    : `Buy ${domain.name} today. This premium ${domain.category} domain is available for sale. Price: $${domain.price.toLocaleString()}. Secure escrow and fast transfer available.`;
+    : generateAutoDescription(domain.name);
 
   // 4. Keywords
   const seoKeywords = domain.seo?.meta_keywords || [
@@ -383,7 +386,7 @@ const DomainDetailPage = () => {
       "@context": "https://schema.org",
       "@type": "Product",
       "name": domain.name,
-      "description": seoDescription, // Uses the domain.description based variable
+      "description": seoDescription, // Uses the same conditional description
       "image": finalImage,
       "url": currentUrl,
       "sku": domain.name,
@@ -533,12 +536,11 @@ const DomainDetailPage = () => {
                    <StatItem label="Est. Value" value="Premium" icon={<TrendingUp className="w-5 h-5" />} />
                 </div>
 
-                {/* Description */}
+                {/* Description - UPDATED WITH CONDITIONAL DISPLAY */}
                 <SectionCard title={`Domain Details for ${domain.name}`} icon={<FileText className="w-5 h-5" />}>
                    <div className="prose prose-slate max-w-none text-slate-600 leading-relaxed">
                       <p>
-                        <strong>{domain.name}</strong> is a high-value, premium domain name now available for acquisition. 
-                        {domain.description || ` Ideally suited for a forward-thinking ${domain.category} brand, this asset offers brevity, memorability, and authority.`}
+                        {seoDescription}
                       </p>
                       <p>
                         Securing <em>{domain.name}</em> instantly provides your business with a credible digital footprint. 

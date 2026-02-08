@@ -6,10 +6,16 @@ import { ExternalLink, Tag } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import PremiumBadge from '@/components/PremiumBadge';
 import DomainLogoDisplay from '@/components/DomainLogoDisplay';
+import { generateAutoDescription } from '@/utils/generateAutoDescription';
 
 const DomainCard = ({ domain }) => {
   // Construct the descriptive alt text for SEO
   const seoAltText = domain.logo_alt_text || `${domain.name} - Premium Domain Name for Sale`;
+
+  // Determine description to display
+  const displayDescription = domain.description && domain.description.trim().length > 0
+    ? domain.description
+    : generateAutoDescription(domain.name);
 
   return (
     <motion.div
@@ -58,11 +64,9 @@ const DomainCard = ({ domain }) => {
             <Tag className="h-3.5 w-3.5" />
             <span>{domain.category}</span>
           </div>
-          {domain.description && (
-            <p className="text-sm text-slate-600 line-clamp-2 leading-relaxed">
-              {domain.description}
-            </p>
-          )}
+          <p className="text-sm text-slate-600 line-clamp-2 leading-relaxed">
+            {displayDescription}
+          </p>
         </div>
 
         <div className="flex items-center justify-between mt-auto pt-4 border-t border-slate-50">
