@@ -22,6 +22,7 @@ import { getSupabaseImageUrl } from '@/utils/getSupabaseImageUrl';
 import { generateAutoDescription } from '@/utils/generateAutoDescription';
 import { useNoCache } from '@/hooks/useNoCache';
 import { DomainDetailSkeleton } from '@/components/LoadingSkeleton';
+import { isUnstoppableDomain, getUnstoppableDomainsUrl } from '@/utils/unstoppableDomainsHelper';
 
 const SectionCard = ({ title, icon, children, className = "" }) => (
   <section className={`bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden ${className}`}>
@@ -211,13 +212,8 @@ const DomainDetailPage = () => {
   const handleMakeOffer = () => setShowOfferForm(true);
   const handleWhatsAppContact = () => window.open(`https://wa.me/905313715417?text=${encodeURIComponent(`Is the domain ${domain.name} available?`)}`, '_blank');
   
-  const handleWeb3Redirect = () => {
-    const searchTerm = domain.name.toLowerCase().endsWith('.web3') ? domain.name : `${domain.name}.web3`;
-    window.open(`https://unstoppabledomains.com/search?searchTerm=${searchTerm}&searchRef=homepage`, '_blank');
-  };
-
   const handleWhoisLookup = async () => {
-    if (isWeb3Domain) {
+    if (isUnstoppable) {
       toast({ title: "WHOIS Not Available", description: "WHOIS data is not available for Web3 domains.", variant: "destructive" });
       return;
     }
@@ -251,7 +247,7 @@ const DomainDetailPage = () => {
     );
   }
 
-  const isWeb3Domain = (domain.tld && domain.tld.toLowerCase() === '.web3') || (domain.name && domain.name.toLowerCase().endsWith('.web3'));
+  const isUnstoppable = isUnstoppableDomain(domain.name);
   const domainLen = domain.name.split('.')[0].length;
 
   const cleanDisplayTitle = domain.name;
@@ -482,10 +478,12 @@ const DomainDetailPage = () => {
                     </h3>
                     
                     <div className="space-y-4">
-                       {isWeb3Domain ? (
-                          <Button size="lg" onClick={handleWeb3Redirect} className="w-full h-14 text-base font-bold bg-blue-600 hover:bg-blue-700">
-                             <Globe className="w-5 h-5 mr-2" /> View on Unstoppable
-                          </Button>
+                       {isUnstoppable ? (
+                          <a href={getUnstoppableDomainsUrl(domain.name)} target="_blank" rel="noopener noreferrer">
+                            <Button size="lg" className="w-full h-14 text-base font-bold bg-blue-600 hover:bg-blue-700">
+                               <Globe className="w-5 h-5 mr-2" /> Buy via Unstoppable Domains
+                            </Button>
+                          </a>
                        ) : (
                           <>
                              <Button size="lg" onClick={handleBuyNow} disabled={domain.status !== 'available'} className="w-full h-14 text-base font-bold bg-emerald-600 hover:bg-emerald-700 shadow-md shadow-emerald-200">

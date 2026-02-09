@@ -2,17 +2,20 @@
 import React, { useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { ExternalLink, Tag } from 'lucide-react';
+import { ExternalLink, Tag, Globe } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import PremiumBadge from '@/components/PremiumBadge';
 import DomainLogoDisplay from '@/components/DomainLogoDisplay';
 import { generateAutoDescription } from '@/utils/generateAutoDescription';
 import { getSupabaseImageUrl } from '@/utils/getSupabaseImageUrl';
+import { isUnstoppableDomain, getUnstoppableDomainsUrl } from '@/utils/unstoppableDomainsHelper';
 
 const DomainCard = ({ domain, priority = false }) => {
   // Construct the descriptive alt text for SEO
   const seoAltText = domain.logo_alt_text || `${domain.name} - Premium Domain Logo`;
   const loadingStrategy = priority ? "eager" : "lazy";
+  
+  const isUnstoppable = isUnstoppableDomain(domain.name);
 
   // Determine description to display
   const displayDescription = domain.description && domain.description.trim().length > 0
@@ -21,13 +24,8 @@ const DomainCard = ({ domain, priority = false }) => {
 
   // Generate image URL synchronously
   const fullLogoUrl = useMemo(() => {
-    // LOGGING - Task 1A
-    // console.log('DomainCard - domain:', domain.name, 'logo_url:', domain?.logo_url);
-    
     if (!domain.logo_url) return null;
     const url = getSupabaseImageUrl(domain.name, domain.logo_url);
-    
-    // console.log('DomainCard - calculated imageUrl:', url);
     return url;
   }, [domain.name, domain.logo_url]);
 
@@ -37,10 +35,7 @@ const DomainCard = ({ domain, priority = false }) => {
       className="bg-white rounded-xl shadow-sm hover:shadow-md transition-all border border-slate-200 flex flex-col h-full overflow-hidden group"
     >
       <div className="p-5 md:p-6 flex-1 flex flex-col">
-        {/* Logo Display Section 
-            ALWAYS render DomainLogoDisplay now, allowing it to handle the "no logo" state 
-            by showing a placeholder instead of nothing or an error.
-        */}
+        {/* Logo Display Section */}
         <div className="mb-4 -mt-2">
           <DomainLogoDisplay 
             actualImageUrl={fullLogoUrl}
@@ -93,15 +88,29 @@ const DomainCard = ({ domain, priority = false }) => {
               ${domain.price.toLocaleString()}
             </span>
           </div>
-          <Link 
-            to={`/domain/${domain.name}`}
-            title={`Buy ${domain.name} - ${domain.category} Domain`}
-            aria-label={`View details and buy ${domain.name}`}
-          >
-            <Button size="sm" className="bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm shadow-emerald-100">
-              Details <ExternalLink className="ml-1.5 h-3.5 w-3.5" />
-            </Button>
-          </Link>
+          
+          {isUnstoppable ? (
+            <a 
+              href={getUnstoppableDomainsUrl(domain.name)}
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label={`Buy ${domain.name} on Unstoppable Domains`}
+            >
+              <Button size="sm" className="bg-blue-600 hover:bg-blue-700 text-white shadow-sm shadow-blue-100">
+                Buy via UD <Globe className="ml-1.5 h-3.5 w-3.5" />
+              </Button>
+            </a>
+          ) : (
+            <Link 
+              to={`/domain/${domain.name}`}
+              title={`Buy ${domain.name} - ${domain.category} Domain`}
+              aria-label={`View details and buy ${domain.name}`}
+            >
+              <Button size="sm" className="bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm shadow-emerald-100">
+                Details <ExternalLink className="ml-1.5 h-3.5 w-3.5" />
+              </Button>
+            </Link>
+          )}
         </div>
       </div>
     </motion.div>
