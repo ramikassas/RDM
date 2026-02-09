@@ -2,7 +2,7 @@
 import React from 'react';
 import { Helmet } from 'react-helmet';
 import { useLocation } from 'react-router-dom';
-import { generateDomainSchema } from '@/utils/schemaGenerator';
+import { generateDomainSchema, getOrganizationSchema, generateBreadcrumbSchema } from '@/utils/schemaGenerator';
 import { generateCanonicalUrl } from '@/utils/generateCanonicalUrl';
 
 const SEO = ({ 
@@ -14,7 +14,7 @@ const SEO = ({
   url,
   ogUrl,
   twitterUrl,
-  twitterSite = '@rami_kassas',
+  twitterSite = '@rami_kassas', // Updated default
   canonicalUrl,
   schema,
   breadcrumbSchema,
@@ -32,8 +32,6 @@ const SEO = ({
   const finalImage = image || defaultImage;
 
   // Strict Canonical Generation
-  // If a manual canonicalUrl is passed, trust it (but ensure it's absolute). 
-  // Otherwise generate strictly from current location.
   const generatedCanonical = generateCanonicalUrl(location.pathname);
   const finalCanonicalUrl = canonicalUrl || generatedCanonical;
 
@@ -41,10 +39,13 @@ const SEO = ({
   const finalOgUrl = ogUrl || url || finalCanonicalUrl;
   const finalTwitterUrl = twitterUrl || finalOgUrl; 
 
-  // Schema Injection Logic
+  // --- Schema Injection Logic ---
   const schemasToRender = [];
   
-  // 1. Add explicitly passed schema (if any)
+  // 1. Always include Organization Schema (Global)
+  schemasToRender.push(getOrganizationSchema());
+
+  // 2. Add explicit schemas passed via props
   if (schema) {
     if (Array.isArray(schema)) {
        schemasToRender.push(...schema);
@@ -53,8 +54,7 @@ const SEO = ({
     }
   }
   
-  // 2. Auto-generate Domain Product Schema (ONLY if domainData provided)
-  // Prevents duplicates by only generating if explicit data is passed
+  // 3. Auto-generate Domain Product Schema (ONLY if domainData provided)
   if (domainData) {
     const autoSchema = generateDomainSchema({
       name: domainData.name,
@@ -63,7 +63,8 @@ const SEO = ({
       url: finalCanonicalUrl,
       price: domainData.price,
       status: domainData.status,
-      category: domainData.category
+      category: domainData.category,
+      sku: domainData.name
     });
     
     // Check if a Product schema was already manually passed to avoid duplicates
@@ -74,8 +75,11 @@ const SEO = ({
     }
   }
 
-  // 3. Add Breadcrumb schema
-  if (breadcrumbSchema) {
+  // 4. Auto-generate Breadcrumb Schema (if not passed explicitly but domainData exists)
+  if (!breadcrumbSchema && domainData) {
+     const autoBreadcrumb = generateBreadcrumbSchema(domainData.name);
+     schemasToRender.push(autoBreadcrumb);
+  } else if (breadcrumbSchema) {
     schemasToRender.push(breadcrumbSchema);
   }
 
@@ -111,7 +115,7 @@ const SEO = ({
 
       {/* JSON-LD Schemas */}
       {schemasToRender.map((s, index) => (
-        <script key={index} type="application/ld+json">
+        <script key={`schema-${index}`} type="application/ld+json">
           {JSON.stringify(s)}
         </script>
       ))}

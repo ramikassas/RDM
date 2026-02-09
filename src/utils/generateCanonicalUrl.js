@@ -1,3 +1,4 @@
+
 /**
  * Generates a strictly formatted canonical URL.
  * Enforces: Lowercase, No trailing slash, Absolute URL, No query params.

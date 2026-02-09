@@ -1,4 +1,5 @@
 
+
 import React, { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
@@ -40,7 +41,8 @@ import { formatDateOnly } from '@/utils/formatDate';
 import { getSupabaseImageUrl } from '@/utils/getSupabaseImageUrl';
 import { generateAutoDescription } from '@/utils/generateAutoDescription';
 import { generateSmartTitle } from '@/utils/generateSmartTitle';
-import { generateDomainSchema } from '@/utils/schemaGenerator'; // Import purely for validation logging
+// Import generators for debug logging only, SEO component handles actual injection
+import { generateDomainSchema, getOrganizationSchema, generateBreadcrumbSchema } from '@/utils/schemaGenerator'; 
 
 // --- Helper Components ---
 const SectionCard = ({ title, icon, children, className = "" }) => (
@@ -344,52 +346,31 @@ const DomainDetailPage = () => {
 
   const finalCanonical = domain.seo?.canonical_url || currentUrl;
 
-  const breadcrumbSchema = {
-    "@context": "https://schema.org",
-    "@type": "BreadcrumbList",
-    "itemListElement": [{
-      "@type": "ListItem", 
-      "position": 1, 
-      "name": "Marketplace", 
-      "item": "https://rdm.bz/marketplace"
-    },{
-      "@type": "ListItem", 
-      "position": 2, 
-      "name": domain.name, 
-      "item": currentUrl
-    }]
-  };
-
-  const organizationSchema = {
-    "@context": "https://schema.org",
-    "@type": "Organization",
-    "name": "Rare Domains Marketplace",
-    "url": "https://rdm.bz",
-    "logo": "https://rdm.bz/logo.png",
-    "sameAs": [
-       "https://twitter.com/rdm_bz",
-       "https://instagram.com/rdm_bz"
-    ]
-  };
-
-  const descriptiveAltText = `${domain.name} logo - premium domain for sale`;
-  const displayH1 = domain.seo?.h1_title || seoTitle.split('|')[0].trim(); // Use the optimized title without site suffix for H1 if not set
+  const displayH1 = domain.seo?.h1_title || seoTitle.split('|')[0].trim();
   
-  // Debug Logging for Schema Verification
-  if (domain) {
-    const debugSchema = generateDomainSchema({
-        name: domain.name,
-        description: seoDescription,
-        image: finalImage,
-        url: currentUrl,
-        price: domain.price,
-        status: domain.status,
-        category: domain.category
-    });
-    console.group('🔍 SEO SCHEMA DEBUG');
+  // Explicitly construct data for SEO component to ensure fresh re-generation
+  const domainSEOData = {
+      name: domain.name,
+      description: seoDescription,
+      image: finalImage,
+      url: currentUrl,
+      price: domain.price,
+      status: domain.status,
+      category: domain.category,
+      sku: domain.name
+  };
+
+  // Debug Logging for Verification
+  if (import.meta.env.MODE !== 'production') {
+    const debugSchema = generateDomainSchema(domainSEOData);
+    const debugOrg = getOrganizationSchema();
+    const debugBreadcrumb = generateBreadcrumbSchema(domain.name);
+    
+    console.group(`🔍 SEO SCHEMA DEBUG: ${domain.name}`);
+    console.log('✅ Fresh Data Loaded?', domain.name === domainName);
     console.log('✅ Generated Product Schema:', debugSchema);
-    console.log('📦 Offers structure valid?', debugSchema.offers['@type'] === 'Offer');
-    console.log('🔗 URL absolute?', debugSchema.url.startsWith('http'));
+    console.log('✅ Organization Schema SameAs:', debugOrg.sameAs);
+    console.log('✅ Breadcrumb Items:', debugBreadcrumb.itemListElement);
     console.groupEnd();
   }
 
@@ -407,27 +388,16 @@ const DomainDetailPage = () => {
         twitterSite="@rami_kassas"
         canonicalUrl={finalCanonical}
         
-        // Pass schema_data from DB if it exists, but ensure we don't duplicate Product if we're auto-generating it
+        // Pass schema_data from DB if it exists. 
+        // NOTE: We do NOT pass organization schema here anymore because SEO.jsx now handles it globally
         schema={domain.seo?.schema_data && Object.keys(domain.seo.schema_data).length > 0 ? domain.seo.schema_data : null}
         
-        domainData={{
-          name: domain.name,
-          description: seoDescription,
-          image: finalImage,
-          url: currentUrl,
-          price: domain.price,
-          status: domain.status,
-          category: domain.category
-        }}
+        // Passing domainData triggers auto-generation of Product schema inside SEO.jsx
+        domainData={domainSEOData}
         
-        breadcrumbSchema={breadcrumbSchema}
         ogTitle={seoOgTitle}
       />
       
-      <script type="application/ld+json">
-        {JSON.stringify(organizationSchema)}
-      </script>
-
       <div className="min-h-screen bg-slate-50 font-sans pb-16">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 md:py-12">
           
@@ -443,7 +413,7 @@ const DomainDetailPage = () => {
                   {domain.logo_url ? (
                     <DomainLogoDisplay 
                       logoUrl={domain.logo_url} 
-                      altText={descriptiveAltText} 
+                      altText={`${domain.name} logo`} 
                       domainName={domain.name} 
                       className="mb-0"
                       imageClassName="max-h-[160px] max-w-[280px]"
