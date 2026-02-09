@@ -1,7 +1,7 @@
-
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { ImageOff, Loader2 } from 'lucide-react';
+import { getSupabaseImageUrl } from '@/utils/getSupabaseImageUrl';
 
 const DomainLogoDisplay = ({ 
   logoUrl, 
@@ -14,22 +14,70 @@ const DomainLogoDisplay = ({
 }) => {
   const [loaded, setLoaded] = useState(false);
   const [error, setError] = useState(false);
+  const [finalUrl, setFinalUrl] = useState('');
+  const imgRef = useRef(null);
 
-  // Determine which URL to use
-  const finalUrl = actualImageUrl || logoUrl;
+  // Constants for timeout
+  const LOAD_TIMEOUT_MS = 5000; 
 
+  // Effect to construct the URL reliably
   useEffect(() => {
-    // Reset state when props change
-    setError(false);
-    setLoaded(false);
+    let url = '';
+    
+    if (actualImageUrl) {
+      url = actualImageUrl;
+    } else if (logoUrl && domainName) {
+      // Use the utility to ensure correct path construction
+      url = getSupabaseImageUrl(domainName, logoUrl);
+    } else if (logoUrl) {
+      // Fallback if domainName missing but logoUrl exists (e.g. absolute URL)
+      url = logoUrl;
+    }
+
+    setFinalUrl(url);
+    
+    // Reset state when URL changes
+    if (url) {
+      setLoaded(false);
+      setError(false);
+    }
+  }, [logoUrl, actualImageUrl, domainName]);
+
+  // Effect to handle stuck loading states (timeout)
+  useEffect(() => {
+    if (!finalUrl || loaded || error) return;
+
+    const timer = setTimeout(() => {
+      if (!loaded && !error) {
+        console.warn(`Image load timed out for ${domainName}: ${finalUrl}`);
+        setError(true);
+      }
+    }, LOAD_TIMEOUT_MS);
+
+    return () => clearTimeout(timer);
+  }, [finalUrl, loaded, error, domainName]);
+
+  // Effect to check if image is already cached/loaded immediately
+  useEffect(() => {
+    if (imgRef.current && imgRef.current.complete) {
+      if (imgRef.current.naturalWidth > 0) {
+        setLoaded(true);
+      } else {
+        // If complete but width is 0, it might be a broken image
+        // We'll let onError handle it, or the timeout
+      }
+    }
   }, [finalUrl]);
 
   // SEO-optimized attributes
   const finalAltText = altText || `${domainName} - Premium Domain Logo`;
   const finalTitle = `${domainName} - Premium Domain Logo`;
 
-  // If no URL provided, don't render anything
-  if (!finalUrl) return null;
+  // If no URL generated, render nothing or fallback
+  if (!finalUrl) {
+    // Optional: render placeholder if no URL is present at all
+    return null; 
+  }
 
   // Fallback UI if image fails to load
   if (error) {
@@ -52,8 +100,8 @@ const DomainLogoDisplay = ({
       className={`flex justify-center ${className}`}
     >
       <div className="relative group w-full flex justify-center">
-        {/* Loading Skeleton */}
-        {!loaded && (
+        {/* Loading Skeleton - Only show if NOT loaded and NO error */}
+        {!loaded && !error && (
           <div className="absolute inset-0 flex items-center justify-center z-0">
              <div className="w-[200px] h-[200px] rounded-2xl bg-slate-50 border border-slate-100 flex items-center justify-center">
                 <Loader2 className="w-6 h-6 text-slate-300 animate-spin" />
@@ -64,6 +112,7 @@ const DomainLogoDisplay = ({
         {/* Image Container */}
         <div className={`bg-white p-4 sm:p-6 rounded-3xl shadow-lg shadow-slate-100 border border-slate-100 inline-block relative z-10 ${!loaded ? 'invisible' : 'visible'}`}>
            <img 
+            ref={imgRef}
             src={finalUrl} 
             alt={finalAltText}
             title={finalTitle}
@@ -74,16 +123,19 @@ const DomainLogoDisplay = ({
               ${imageClassName}
             `}
             onLoad={() => {
+              // console.log(`Image loaded: ${finalUrl}`);
               setLoaded(true);
             }}
-            onError={() => {
+            onError={(e) => {
+              console.error(`Image failed to load: ${finalUrl}`, e);
               setError(true);
+              setLoaded(true); // Stop loading spinner even on error
             }}
           />
         </div>
         
         {/* Subtle reflection effect - only show when loaded */}
-        {loaded && (
+        {loaded && !error && (
           <div className="absolute -bottom-4 left-0 right-0 h-4 bg-gradient-to-t from-slate-50 to-transparent opacity-50 rounded-full blur-md -z-0" />
         )}
       </div>
