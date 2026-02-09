@@ -8,9 +8,10 @@ import PremiumBadge from '@/components/PremiumBadge';
 import DomainLogoDisplay from '@/components/DomainLogoDisplay';
 import { generateAutoDescription } from '@/utils/generateAutoDescription';
 
-const DomainCard = ({ domain }) => {
+const DomainCard = ({ domain, priority = false }) => {
   // Construct the descriptive alt text for SEO
-  const seoAltText = domain.logo_alt_text || `${domain.name} - Premium Domain Name for Sale`;
+  const seoAltText = domain.logo_alt_text || `${domain.name} - Premium Domain Logo`;
+  const loadingStrategy = priority ? "eager" : "lazy";
 
   // Determine description to display
   const displayDescription = domain.description && domain.description.trim().length > 0
@@ -32,6 +33,7 @@ const DomainCard = ({ domain }) => {
               domainName={domain.name}
               className="mb-2" 
               imageClassName="max-h-24 max-w-[180px] p-0"
+              loading={loadingStrategy}
             />
           </div>
         )}

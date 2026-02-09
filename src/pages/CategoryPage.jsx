@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { RefreshCw, AlertCircle } from 'lucide-react';
@@ -96,8 +97,12 @@ const CategoryPage = ({
               transition={{ duration: 0.5 }}
               className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
             >
-              {domains.map((domain) => (
-                <DomainCard key={domain.id} domain={domain} />
+              {domains.map((domain, index) => (
+                <DomainCard 
+                  key={domain.id} 
+                  domain={domain} 
+                  priority={index === 0}
+                />
               ))}
             </motion.div>
           )}

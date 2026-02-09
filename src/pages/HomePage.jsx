@@ -171,7 +171,14 @@ const HomePage = () => {
               </div>
               
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                {featuredDomains.map(domain => <DomainCard key={domain.id} domain={domain} viewMode='grid' />)}
+                {featuredDomains.map((domain, index) => (
+                  <DomainCard 
+                    key={domain.id} 
+                    domain={domain} 
+                    viewMode='grid' 
+                    priority={index === 0} // Eager load first card
+                  />
+                ))}
               </div>
 
               <div className="mt-12 text-center md:hidden">
@@ -198,7 +205,7 @@ const HomePage = () => {
               </div>
 
               <div className="space-y-16">
-                {/* 1. What are Domains & Benefits */}
+                {/* Content... */}
                 <div className="grid md:grid-cols-2 gap-12 items-center">
                   <div>
                     <h3 className="text-2xl font-bold text-slate-900 mb-4 flex items-center">
@@ -228,7 +235,7 @@ const HomePage = () => {
                   </div>
                 </div>
 
-                {/* 2. Extensions & Choosing */}
+                {/* Content... */}
                 <div className="grid md:grid-cols-3 gap-8">
                   <div className="col-span-1 md:col-span-3 mb-4">
                      <h3 className="text-2xl font-bold text-slate-900 mb-4 flex items-center">
@@ -269,7 +276,7 @@ const HomePage = () => {
                   </Card>
                 </div>
 
-                {/* 3. SEO & Tips */}
+                {/* Content... */}
                 <div className="bg-slate-900 rounded-2xl p-8 md:p-12 text-white relative overflow-hidden">
                    <div className="absolute top-0 right-0 -mt-10 -mr-10 w-40 h-40 bg-emerald-500 rounded-full filter blur-3xl opacity-20"></div>
                    

@@ -1,6 +1,6 @@
 
 import React, { useEffect, useState } from 'react';
-import { Search, SlidersHorizontal, Grid, List, Filter } from 'lucide-react';
+import { Search, SlidersHorizontal, Grid, List, Filter, ChevronDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/lib/customSupabaseClient';
 import DomainCard from '@/components/DomainCard';
@@ -29,6 +29,7 @@ const MarketplacePage = () => {
   const [sortBy, setSortBy] = useState('newest'); 
   const [viewMode, setViewMode] = useState('grid');
   const [showMobileFilters, setShowMobileFilters] = useState(false);
+  const [isCategoriesExpanded, setIsCategoriesExpanded] = useState(false);
 
   const [uniqueTLDs, setUniqueTLDs] = useState([]);
   const [uniqueCategories, setUniqueCategories] = useState([]);
@@ -41,6 +42,7 @@ const MarketplacePage = () => {
   useEffect(() => {
     const query = searchParams.get('search') || '';
     if (query !== searchQuery) {
+      console.log('Syncing search query from URL:', query);
       setSearchQuery(query);
     }
   }, [searchParams]);
@@ -71,6 +73,7 @@ const MarketplacePage = () => {
 
   const applyFilters = () => {
     let filtered = [...domains];
+    
     if (searchQuery) {
       const query = searchQuery.toLowerCase().trim();
       filtered = filtered.filter(domain => {
@@ -102,10 +105,14 @@ const MarketplacePage = () => {
       case 'length-asc': filtered.sort((a, b) => a.name.length - b.name.length); break;
       case 'newest': default: filtered.sort((a, b) => new Date(b.created_at) - new Date(a.created_at)); break;
     }
+    
     setFilteredDomains(filtered);
   };
 
-  const handleSearchChange = (e) => setSearchQuery(e.target.value);
+  const handleSearchChange = (e) => {
+    setSearchQuery(e.target.value);
+  };
+
   const toggleTLD = (tld) => setSelectedTLD(prev => prev.includes(tld) ? prev.filter(t => t !== tld) : [...prev, tld]);
   const toggleCategory = (cat) => setSelectedCategories(prev => prev.includes(cat) ? prev.filter(c => c !== cat) : [...prev, cat]);
   const resetFilters = () => {
@@ -182,8 +189,21 @@ const MarketplacePage = () => {
 
           <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
             
+            {/* Mobile Filter Toggle */}
+            <div className="lg:hidden mb-4">
+               <Button 
+                 variant="outline" 
+                 onClick={() => setShowMobileFilters(!showMobileFilters)} 
+                 className={`w-full flex items-center justify-center gap-2 ${showMobileFilters ? 'bg-slate-900 text-white' : ''}`}
+               >
+                 <SlidersHorizontal className="h-4 w-4" />
+                 {showMobileFilters ? 'Hide Filters' : 'Show Advanced Filters'}
+               </Button>
+            </div>
+
+            {/* Filters Sidebar */}
             <div className={`lg:block ${showMobileFilters ? 'block' : 'hidden'}`}>
-              <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-5 sticky top-24 max-h-[calc(100vh-8rem)] overflow-y-auto custom-scrollbar">
+              <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-5 lg:sticky lg:top-24 lg:max-h-[calc(100vh-8rem)] lg:overflow-y-auto custom-scrollbar">
                 <div className="flex items-center justify-between mb-6">
                   <h3 className="font-bold text-slate-900 flex items-center gap-2">
                     <Filter className="w-4 h-4" /> Filters
@@ -195,8 +215,19 @@ const MarketplacePage = () => {
                   <div>
                      <Label className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2 block">Keyword</Label>
                      <div className="relative">
-                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 h-4 w-4" />
-                        <input type="text" placeholder="Search..." value={searchQuery} onChange={handleSearchChange} className="w-full pl-9 pr-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500" />
+                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 h-4 w-4 pointer-events-none" />
+                        <input 
+                          type="text" 
+                          inputMode="search"
+                          placeholder="Search..." 
+                          value={searchQuery} 
+                          onChange={handleSearchChange}
+                          onInput={handleSearchChange} 
+                          className="w-full pl-9 pr-3 py-2 text-base sm:text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500" 
+                          autoComplete="off"
+                          autoCorrect="off"
+                          spellCheck="false"
+                        />
                      </div>
                   </div>
 
@@ -216,8 +247,8 @@ const MarketplacePage = () => {
                     <Slider defaultValue={[1, 20]} value={lengthRange} max={20} step={1} min={1} onValueChange={setLengthRange} className="py-4" />
                   </div>
 
-                  <Accordion type="multiple" defaultValue={['tld', 'category']} className="w-full">
-                    <AccordionItem value="tld">
+                  <Accordion type="multiple" defaultValue={['tld']} className="w-full">
+                    <AccordionItem value="tld" className="border-b-0">
                       <AccordionTrigger className="text-sm font-bold text-slate-800 hover:no-underline">Extensions (TLD)</AccordionTrigger>
                       <AccordionContent>
                         <div className="grid grid-cols-2 gap-2 pt-1">
@@ -230,30 +261,40 @@ const MarketplacePage = () => {
                         </div>
                       </AccordionContent>
                     </AccordionItem>
-
-                    <AccordionItem value="category">
-                      <AccordionTrigger className="text-sm font-bold text-slate-800 hover:no-underline">Categories</AccordionTrigger>
-                      <AccordionContent>
-                        <div className="space-y-2 pt-1">
-                          {uniqueCategories.map(cat => (
-                            <div key={cat} className="flex items-center space-x-2">
-                              <Checkbox id={`cat-${cat}`} checked={selectedCategories.includes(cat)} onCheckedChange={() => toggleCategory(cat)} />
-                              <label htmlFor={`cat-${cat}`} className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 text-slate-600">{cat}</label>
-                            </div>
-                          ))}
-                        </div>
-                      </AccordionContent>
-                    </AccordionItem>
                   </Accordion>
+
+                  {/* Manual Categories Section */}
+                  <div className="border-t border-slate-200 pt-4">
+                    <button 
+                      onClick={() => setIsCategoriesExpanded(!isCategoriesExpanded)}
+                      className="flex items-center justify-between w-full text-sm font-bold text-slate-800 hover:text-emerald-600 transition-colors group py-2"
+                    >
+                      <span>Categories</span>
+                      <ChevronDown className={`h-4 w-4 text-slate-500 transition-transform duration-300 ${isCategoriesExpanded ? 'transform rotate-180' : ''} group-hover:text-emerald-600`} />
+                    </button>
+                    
+                    <motion.div
+                      initial={false}
+                      animate={{ 
+                        height: isCategoriesExpanded ? 'auto' : 0,
+                        opacity: isCategoriesExpanded ? 1 : 0
+                      }}
+                      transition={{ duration: 0.3, ease: 'easeInOut' }}
+                      className="overflow-hidden"
+                    >
+                      <div className="space-y-2 pt-3 pb-2">
+                        {uniqueCategories.map(cat => (
+                          <div key={cat} className="flex items-center space-x-2">
+                            <Checkbox id={`cat-${cat}`} checked={selectedCategories.includes(cat)} onCheckedChange={() => toggleCategory(cat)} />
+                            <label htmlFor={`cat-${cat}`} className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 text-slate-600 cursor-pointer hover:text-emerald-600 transition-colors">{cat}</label>
+                          </div>
+                        ))}
+                      </div>
+                    </motion.div>
+                  </div>
+
                 </div>
               </div>
-            </div>
-
-            <div className="lg:hidden mb-4">
-               <Button variant="outline" onClick={() => setShowMobileFilters(!showMobileFilters)} className={`w-full flex items-center justify-center gap-2 ${showMobileFilters ? 'bg-slate-900 text-white' : ''}`}>
-                 <SlidersHorizontal className="h-4 w-4" />
-                 {showMobileFilters ? 'Hide Filters' : 'Show Advanced Filters'}
-               </Button>
             </div>
 
             <div className="lg:col-span-3">
@@ -273,8 +314,13 @@ const MarketplacePage = () => {
                 </div>
               ) : (
                 <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className={`grid ${viewMode === 'grid' ? 'grid-cols-1 md:grid-cols-2 xl:grid-cols-3' : 'grid-cols-1'} gap-6`}>
-                  {filteredDomains.map((domain) => (
-                    <DomainCard key={domain.id} domain={domain} viewMode={viewMode} />
+                  {filteredDomains.map((domain, index) => (
+                    <DomainCard 
+                      key={domain.id} 
+                      domain={domain} 
+                      viewMode={viewMode} 
+                      priority={index === 0} // Eager load first item
+                    />
                   ))}
                 </motion.div>
               )}

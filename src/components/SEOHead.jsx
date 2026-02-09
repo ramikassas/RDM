@@ -17,7 +17,7 @@ const SEOHead = ({
   const location = useLocation();
   const baseUrl = 'https://rdm.bz'; 
   
-  // Data Priority: 1. DB Data (seoData) -> 2. Props (default*) -> 3. Hardcoded Fallbacks
+  // Data Priority
   const title = seoData?.meta_title || defaultTitle || "Rare Domains Marketplace (RDM) - Premium Digital Assets";
   const description = seoData?.meta_description || defaultDescription || "Rare Domains Marketplace (RDM) is the premier marketplace for rare, premium, and exclusive domain names.";
   const keywords = seoData?.meta_keywords || defaultKeywords;
@@ -29,7 +29,13 @@ const SEOHead = ({
     cleanPath = cleanPath.slice(0, -1);
   }
   const derivedCanonicalUrl = canonicalUrl || `${baseUrl}${cleanPath}`;
-  const finalImage = image || "https://rdm.bz/og-image.png";
+
+  // Image handling
+  let finalImage = image || "https://rdm.bz/og-image.png";
+  if (finalImage.startsWith('/')) {
+    finalImage = `${baseUrl}${finalImage}`;
+  }
+
   const siteName = "Rare Domains Marketplace (RDM)";
 
   return (
@@ -52,6 +58,7 @@ const SEOHead = ({
       <meta property="og:title" content={title} />
       <meta property="og:description" content={description} />
       <meta property="og:image" content={finalImage} />
+      <meta property="og:image:alt" content={title} />
       <meta property="og:site_name" content={siteName} />
       <meta property="og:locale" content="en_US" />
 
@@ -61,6 +68,7 @@ const SEOHead = ({
       <meta property="twitter:title" content={title} />
       <meta property="twitter:description" content={description} />
       <meta property="twitter:image" content={finalImage} />
+      <meta property="twitter:image:alt" content={title} />
 
       {/* Structured Data (JSON-LD) */}
       {schema && (

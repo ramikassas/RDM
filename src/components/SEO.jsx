@@ -19,7 +19,7 @@ const SEO = ({
   schema,
   breadcrumbSchema,
   ogTitle,
-  domainData // Data for auto-generating Product schema
+  domainData 
 }) => {
   const location = useLocation();
   const siteTitle = "Rare Domains Marketplace (RDM)";
@@ -28,24 +28,29 @@ const SEO = ({
   const finalTitle = title || "Rare Domains Marketplace (RDM) - Buy Premium Domains";
   const finalOgTitle = ogTitle || finalTitle; 
   const finalDescription = description || "Rare Domains Marketplace (RDM) is the premier platform to buy and sell rare, premium, and exclusive domain names.";
+  
+  // Ensure image URL is absolute
   const defaultImage = "https://rdm.bz/og-image.png";
-  const finalImage = image || defaultImage;
+  let finalImage = image || defaultImage;
+  if (finalImage.startsWith('/')) {
+    finalImage = `https://rdm.bz${finalImage}`;
+  }
 
   // Strict Canonical Generation
   const generatedCanonical = generateCanonicalUrl(location.pathname);
   const finalCanonicalUrl = canonicalUrl || generatedCanonical;
 
-  // Open Graph / Twitter URL (should match canonical usually)
+  // Open Graph / Twitter URL
   const finalOgUrl = ogUrl || url || finalCanonicalUrl;
   const finalTwitterUrl = twitterUrl || finalOgUrl; 
 
   // --- Schema Injection Logic ---
   const schemasToRender = [];
   
-  // 1. Always include Organization Schema (Global)
+  // 1. Organization Schema
   schemasToRender.push(getOrganizationSchema());
 
-  // 2. Add explicit schemas passed via props
+  // 2. Explicit schemas
   if (schema) {
     if (Array.isArray(schema)) {
        schemasToRender.push(...schema);
@@ -54,7 +59,7 @@ const SEO = ({
     }
   }
   
-  // 3. Auto-generate Domain Product Schema (ONLY if domainData provided)
+  // 3. Domain Product Schema
   if (domainData) {
     const autoSchema = generateDomainSchema({
       name: domainData.name,
@@ -67,7 +72,7 @@ const SEO = ({
       sku: domainData.name
     });
     
-    // Check if a Product schema was already manually passed to avoid duplicates
+    // Check duplication
     const hasExistingProductSchema = schemasToRender.some(s => s['@type'] === 'Product');
     
     if (autoSchema && !hasExistingProductSchema) {
@@ -75,7 +80,7 @@ const SEO = ({
     }
   }
 
-  // 4. Auto-generate Breadcrumb Schema (if not passed explicitly but domainData exists)
+  // 4. Breadcrumb Schema
   if (!breadcrumbSchema && domainData) {
      const autoBreadcrumb = generateBreadcrumbSchema(domainData.name);
      schemasToRender.push(autoBreadcrumb);
@@ -102,6 +107,7 @@ const SEO = ({
       <meta property="og:url" content={finalOgUrl} />
       <meta property="og:image" content={finalImage} />
       <meta property="og:image:alt" content={finalTitle} />
+      <meta property="og:image:secure_url" content={finalImage} />
       
       {/* Twitter */}
       <meta name="twitter:card" content="summary_large_image" />

@@ -3,28 +3,9 @@ import React, { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { 
-  Check, 
-  ShoppingCart, 
-  Send, 
-  TrendingUp, 
-  ExternalLink, 
-  Globe, 
-  ShieldCheck, 
-  AlertCircle, 
-  Lock, 
-  Flame,
-  Tag,
-  BarChart3,
-  MessageCircle,
-  Clock,
-  ArrowRight,
-  Info,
-  Server,
-  FileText,
-  Target,
-  CreditCard,
-  RefreshCcw,
-  Sparkles
+  Check, ShoppingCart, Send, TrendingUp, ExternalLink, Globe, ShieldCheck, 
+  AlertCircle, Lock, Flame, Tag, BarChart3, MessageCircle, Clock, 
+  ArrowRight, Info, Server, FileText, Target, CreditCard, RefreshCcw, Sparkles 
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/lib/customSupabaseClient';
@@ -40,7 +21,6 @@ import { formatDateOnly } from '@/utils/formatDate';
 import { getSupabaseImageUrl } from '@/utils/getSupabaseImageUrl';
 import { generateAutoDescription } from '@/utils/generateAutoDescription';
 
-// --- Helper Components ---
 const SectionCard = ({ title, icon, children, className = "" }) => (
   <section className={`bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden ${className}`}>
     {(title || icon) && (
@@ -72,12 +52,10 @@ const DomainDetailPage = () => {
   const [timeLeft, setTimeLeft] = useState(null);
   const { toast } = useToast();
 
-  // Recommended Domains State
   const [recommended, setRecommended] = useState([]);
   const [recLoading, setRecLoading] = useState(false);
   const [recError, setRecError] = useState(false);
 
-  // WHOIS State
   const [isWhoisModalOpen, setIsWhoisModalOpen] = useState(false);
   const [whoisLoading, setWhoisLoading] = useState(false);
   const [whoisData, setWhoisData] = useState(null);
@@ -85,7 +63,6 @@ const DomainDetailPage = () => {
 
   useEffect(() => {
     fetchDomain();
-    trackPageView();
   }, [domainName]);
 
   useEffect(() => {
@@ -165,16 +142,6 @@ const DomainDetailPage = () => {
     const timer = setInterval(() => setTimeLeft(calculateTimeLeft()), 1000);
     return () => clearInterval(timer);
   }, [domain?.registration_date]);
-
-  const trackPageView = () => {
-    if (window.gtag) {
-      window.gtag('event', 'page_view', {
-        page_title: `Domain: ${domainName}`,
-        page_location: window.location.href,
-        page_path: window.location.pathname,
-      });
-    }
-  };
 
   const fetchDomain = async () => {
     setLoading(true);
@@ -301,13 +268,8 @@ const DomainDetailPage = () => {
   const isWeb3Domain = (domain.tld && domain.tld.toLowerCase() === '.web3') || (domain.name && domain.name.toLowerCase().endsWith('.web3'));
   const domainLen = domain.name.split('.')[0].length;
 
-  // --- SEO OPTIMIZATION LOGIC ---
   const cleanDisplayTitle = domain.name;
-  
-  // Use page_title if available, otherwise generate a smart marketing title for SEO purposes
   const seoTitle = domain.seo?.page_title || `Buy ${domain.name} - Premium ${domain.category || 'Digital'} Domain Name`;
-
-  // Standardized URLs pointing to /domain/ path for consistency
   const socialUrl = `https://rdm.bz/domain/${domain.name}`;
   const currentUrl = `https://rdm.bz/domain/${domain.name}`;
   
@@ -386,10 +348,11 @@ const DomainDetailPage = () => {
                   {domain.logo_url ? (
                     <DomainLogoDisplay 
                       logoUrl={domain.logo_url} 
-                      altText={`${domain.name} logo`} 
+                      altText={`${domain.name} - Premium Domain Logo`} 
                       domainName={domain.name} 
                       className="mb-0"
                       imageClassName="max-h-[160px] max-w-[280px]"
+                      loading="eager" // Main image eager loaded
                     />
                   ) : (
                     <div className="w-[200px] h-[160px] bg-slate-50 rounded-xl flex items-center justify-center border border-slate-100 text-slate-300 font-bold text-xl">
@@ -434,7 +397,7 @@ const DomainDetailPage = () => {
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
               
               <div className="lg:col-span-2 space-y-8">
-                
+                {/* Content... */}
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                    <StatItem label="Length" value={`${domainLen} Chars`} icon={<BarChart3 className="w-5 h-5" />} />
                    <StatItem label="Extension" value={domain.tld} icon={<Globe className="w-5 h-5" />} />
@@ -654,8 +617,8 @@ const DomainDetailPage = () => {
                  </div>
               ) : recommended.length > 0 ? (
                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {recommended.map((item) => (
-                       <DomainCard key={item.id} domain={item} />
+                    {recommended.map((item, index) => (
+                       <DomainCard key={item.id} domain={item} priority={false} />
                     ))}
                  </div>
               ) : (

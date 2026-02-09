@@ -5,16 +5,17 @@ import { ImageOff, Loader2 } from 'lucide-react';
 
 const DomainLogoDisplay = ({ 
   logoUrl, 
-  actualImageUrl, // New prop for the explicitly constructed URL
+  actualImageUrl, // Explicit URL override
   altText, 
   domainName, 
   className = "mb-8",
-  imageClassName = "max-w-[200px] max-h-[300px]"
+  imageClassName = "max-w-[200px] max-h-[300px]",
+  loading = "lazy" // "lazy" | "eager"
 }) => {
   const [loaded, setLoaded] = useState(false);
   const [error, setError] = useState(false);
 
-  // Determine which URL to use: prefer actualImageUrl, fallback to logoUrl
+  // Determine which URL to use
   const finalUrl = actualImageUrl || logoUrl;
 
   useEffect(() => {
@@ -22,6 +23,10 @@ const DomainLogoDisplay = ({
     setError(false);
     setLoaded(false);
   }, [finalUrl]);
+
+  // SEO-optimized attributes
+  const finalAltText = altText || `${domainName} - Premium Domain Logo`;
+  const finalTitle = `${domainName} - Premium Domain Logo`;
 
   // If no URL provided, don't render anything
   if (!finalUrl) return null;
@@ -60,7 +65,9 @@ const DomainLogoDisplay = ({
         <div className={`bg-white p-4 sm:p-6 rounded-3xl shadow-lg shadow-slate-100 border border-slate-100 inline-block relative z-10 ${!loaded ? 'invisible' : 'visible'}`}>
            <img 
             src={finalUrl} 
-            alt={altText || `${domainName} logo`}
+            alt={finalAltText}
+            title={finalTitle}
+            loading={loading}
             className={`
               w-auto h-auto object-contain
               transition-opacity duration-500
