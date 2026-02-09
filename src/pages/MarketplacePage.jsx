@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { Search, SlidersHorizontal, Grid, List, Filter, ChevronDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -25,7 +24,7 @@ const MarketplacePage = () => {
   const [selectedTLD, setSelectedTLD] = useState([]);
   const [selectedCategories, setSelectedCategories] = useState([]);
   const [priceRange, setPriceRange] = useState([0, 100000]); 
-  const [lengthRange, setLengthRange] = useState([1, 20]);
+  const [lengthRange, setLengthRange] = useState([1, 65]); // ممتاز: تم التعديل
   const [sortBy, setSortBy] = useState('newest'); 
   const [viewMode, setViewMode] = useState('grid');
   const [showMobileFilters, setShowMobileFilters] = useState(false);
@@ -53,19 +52,34 @@ const MarketplacePage = () => {
 
   const fetchDomains = async () => {
     setLoading(true);
+    console.log("Starting fetchDomains..."); // Debug
+
     const { data, error } = await supabase
       .from('domains')
       .select('*')
       .order('created_at', { ascending: false });
 
-    if (!error && data) {
+    if (error) {
+      console.error("Supabase Error:", error);
+      setLoading(false);
+      return;
+    }
+
+    if (data) {
+      console.log("Domains fetched from DB:", data.length, data); // Debug
+      
       setDomains(data);
       const tlds = [...new Set(data.map(d => d.tld).filter(Boolean))];
       const cats = [...new Set(data.map(d => d.category).filter(Boolean))];
-      const maxP = Math.max(...data.map(d => d.price || 0), 100000);
+      
+      // إصلاح السعر: تأكد أننا نأخذ أكبر رقم فعلياً
+      const maxP = Math.max(...data.map(d => Number(d.price) || 0), 100000);
+      
       setUniqueTLDs(tlds);
       setUniqueCategories(cats);
       setMaxPrice(maxP);
+      
+      // هام: تحديث السعر فوراً ليشمل كل النطاقات
       setPriceRange([0, maxP]);
     }
     setLoading(false);
@@ -74,6 +88,10 @@ const MarketplacePage = () => {
   const applyFilters = () => {
     let filtered = [...domains];
     
+    // Debug
+    // console.log("Applying filters. Total domains:", domains.length);
+
+    // 1. Filter by Search Query
     if (searchQuery) {
       const query = searchQuery.toLowerCase().trim();
       filtered = filtered.filter(domain => {
@@ -83,20 +101,32 @@ const MarketplacePage = () => {
         return nameMatch || descMatch || catMatch;
       });
     }
+
+    // 2. Filter by TLD
     if (selectedTLD.length > 0) {
       filtered = filtered.filter(domain => selectedTLD.includes(domain.tld));
     }
+
+    // 3. Filter by Category
     if (selectedCategories.length > 0) {
       filtered = filtered.filter(domain => selectedCategories.includes(domain.category));
     }
+
+    // 4. Filter by Price
     filtered = filtered.filter(domain => 
       domain.price >= priceRange[0] && domain.price <= priceRange[1]
     );
+
+    // 5. Filter by Length (Corrected logic)
     filtered = filtered.filter(domain => {
+      if (!domain.name) return false;
       const nameOnly = domain.name.split('.')[0];
       return nameOnly.length >= lengthRange[0] && nameOnly.length <= lengthRange[1];
     });
 
+    console.log("Final filtered count:", filtered.length); 
+
+    // 6. Sort
     switch (sortBy) {
       case 'price-asc': filtered.sort((a, b) => a.price - b.price); break;
       case 'price-desc': filtered.sort((a, b) => b.price - a.price); break;
@@ -120,7 +150,7 @@ const MarketplacePage = () => {
     setSelectedTLD([]);
     setSelectedCategories([]);
     setPriceRange([0, maxPrice]);
-    setLengthRange([1, 20]);
+    setLengthRange([1, 65]); // Reset to 65 not 20
     setSortBy('newest');
   };
 
@@ -213,8 +243,8 @@ const MarketplacePage = () => {
 
                 <div className="space-y-6">
                   <div>
-                     <Label className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2 block">Keyword</Label>
-                     <div className="relative">
+                      <Label className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2 block">Keyword</Label>
+                      <div className="relative">
                         <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 h-4 w-4 pointer-events-none" />
                         <input 
                           type="text" 
@@ -228,7 +258,7 @@ const MarketplacePage = () => {
                           autoCorrect="off"
                           spellCheck="false"
                         />
-                     </div>
+                      </div>
                   </div>
 
                   <div>
@@ -244,7 +274,7 @@ const MarketplacePage = () => {
                        <Label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Name Length</Label>
                        <span className="text-xs font-medium text-slate-700">{lengthRange[0]} - {lengthRange[1]} chars</span>
                     </div>
-                    <Slider defaultValue={[1, 20]} value={lengthRange} max={20} step={1} min={1} onValueChange={setLengthRange} className="py-4" />
+                    <Slider defaultValue={[1, 65]} value={lengthRange} max={65} step={1} min={1} onValueChange={setLengthRange} className="py-4" />
                   </div>
 
                   <Accordion type="multiple" defaultValue={['tld']} className="w-full">
@@ -306,7 +336,7 @@ const MarketplacePage = () => {
               ) : filteredDomains.length === 0 ? (
                 <div className="text-center py-24 bg-white rounded-xl shadow-sm border border-slate-200">
                   <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-slate-100 mb-4">
-                     <Search className="h-8 w-8 text-slate-400" />
+                      <Search className="h-8 w-8 text-slate-400" />
                   </div>
                   <h3 className="text-xl font-bold text-slate-900 mb-2">No domains found</h3>
                   <p className="text-slate-600 mb-6 max-w-md mx-auto">We couldn't find any domains matching your specific criteria. Try adjusting your price range or removing some filters.</p>
