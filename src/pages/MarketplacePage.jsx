@@ -24,7 +24,7 @@ const MarketplacePage = () => {
   const [selectedTLD, setSelectedTLD] = useState([]);
   const [selectedCategories, setSelectedCategories] = useState([]);
   const [priceRange, setPriceRange] = useState([0, 100000]); 
-  const [lengthRange, setLengthRange] = useState([1, 65]); // ممتاز: تم التعديل
+  const [lengthRange, setLengthRange] = useState([1, 65]); 
   const [sortBy, setSortBy] = useState('newest'); 
   const [viewMode, setViewMode] = useState('grid');
   const [showMobileFilters, setShowMobileFilters] = useState(false);
@@ -41,7 +41,6 @@ const MarketplacePage = () => {
   useEffect(() => {
     const query = searchParams.get('search') || '';
     if (query !== searchQuery) {
-      console.log('Syncing search query from URL:', query);
       setSearchQuery(query);
     }
   }, [searchParams]);
@@ -52,46 +51,36 @@ const MarketplacePage = () => {
 
   const fetchDomains = async () => {
     setLoading(true);
-    console.log("Starting fetchDomains..."); // Debug
-
     const { data, error } = await supabase
       .from('domains')
       .select('*')
       .order('created_at', { ascending: false });
 
-    if (error) {
-      console.error("Supabase Error:", error);
-      setLoading(false);
-      return;
-    }
-
-    if (data) {
-      console.log("Domains fetched from DB:", data.length, data); // Debug
-      
+    if (!error && data) {
       setDomains(data);
+      // 🔥 الإصلاح هنا: نملأ القائمة المعروضة فوراً بالبيانات قبل إيقاف التحميل
+      setFilteredDomains(data); 
+
       const tlds = [...new Set(data.map(d => d.tld).filter(Boolean))];
       const cats = [...new Set(data.map(d => d.category).filter(Boolean))];
       
-      // إصلاح السعر: تأكد أننا نأخذ أكبر رقم فعلياً
       const maxP = Math.max(...data.map(d => Number(d.price) || 0), 100000);
       
       setUniqueTLDs(tlds);
       setUniqueCategories(cats);
       setMaxPrice(maxP);
-      
-      // هام: تحديث السعر فوراً ليشمل كل النطاقات
       setPriceRange([0, maxP]);
     }
+    // الآن نوقف التحميل بعد أن ضمنا وجود البيانات في القائمتين
     setLoading(false);
   };
 
   const applyFilters = () => {
+    // إذا كانت البيانات ما زالت تحمل، لا تقم بالفلترة لتجنب تفريغ القائمة
+    if (loading && domains.length === 0) return;
+
     let filtered = [...domains];
     
-    // Debug
-    // console.log("Applying filters. Total domains:", domains.length);
-
-    // 1. Filter by Search Query
     if (searchQuery) {
       const query = searchQuery.toLowerCase().trim();
       filtered = filtered.filter(domain => {
@@ -102,31 +91,24 @@ const MarketplacePage = () => {
       });
     }
 
-    // 2. Filter by TLD
     if (selectedTLD.length > 0) {
       filtered = filtered.filter(domain => selectedTLD.includes(domain.tld));
     }
 
-    // 3. Filter by Category
     if (selectedCategories.length > 0) {
       filtered = filtered.filter(domain => selectedCategories.includes(domain.category));
     }
 
-    // 4. Filter by Price
     filtered = filtered.filter(domain => 
       domain.price >= priceRange[0] && domain.price <= priceRange[1]
     );
 
-    // 5. Filter by Length (Corrected logic)
     filtered = filtered.filter(domain => {
       if (!domain.name) return false;
       const nameOnly = domain.name.split('.')[0];
       return nameOnly.length >= lengthRange[0] && nameOnly.length <= lengthRange[1];
     });
 
-    console.log("Final filtered count:", filtered.length); 
-
-    // 6. Sort
     switch (sortBy) {
       case 'price-asc': filtered.sort((a, b) => a.price - b.price); break;
       case 'price-desc': filtered.sort((a, b) => b.price - a.price); break;
@@ -150,7 +132,7 @@ const MarketplacePage = () => {
     setSelectedTLD([]);
     setSelectedCategories([]);
     setPriceRange([0, maxPrice]);
-    setLengthRange([1, 65]); // Reset to 65 not 20
+    setLengthRange([1, 65]);
     setSortBy('newest');
   };
 
