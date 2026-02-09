@@ -1,5 +1,5 @@
 
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { 
@@ -23,6 +23,33 @@ import { generateAutoDescription } from '@/utils/generateAutoDescription';
 import { useNoCache } from '@/hooks/useNoCache';
 import { DomainDetailSkeleton } from '@/components/LoadingSkeleton';
 import { isUnstoppableDomain, getUnstoppableDomainsUrl } from '@/utils/unstoppableDomainsHelper';
+import { isDomainSold } from '@/utils/isDomainSold';
+
+/*
+ * REPORT: INFINITE LOGO LOADING LOOP FIX
+ * 
+ * 1. EXACT ROOT CAUSE:
+ *    The `useEffect` hook responsible for calling `fetchRecommended()` had `[domain]` in its dependency array.
+ *    Since `domain` is an object reference, any parent re-render or internal state update (like `realtimeStatus` 
+ *    or even the `setRecommended` call itself) could potentially cause the `domain` object reference to be unstable 
+ *    depending on how `useNoCache` handles updates, or simply create a cycle where:
+ *    fetchRecommended -> setRecommended -> Re-render -> Effect runs again (if domain ref changed) -> Loop.
+ * 
+ * 2. WHERE FIXED:
+ *    - src/pages/DomainDetailPage.jsx: Modified the `useEffect` dependency for fetching recommendations.
+ * 
+ * 3. HOW IT WORKS NOW:
+ *    The effect now depends on `[domain?.id]`. primitives (strings/numbers) are compared by value in React.
+ *    This ensures `fetchRecommended` only runs once when the actual domain ID is resolved/changed, 
+ *    breaking the potential reference equality loop.
+ * 
+ * 4. WHAT WAS THE ISSUE:
+ *    Infinite fetching of recommended domains, which caused the "Recommended Domains" section to constantly 
+ *    re-render, unmounting and remounting `DomainCard` components, triggering endless image loading attempts.
+ * 
+ * 5. HOW IS IT FIXED:
+ *    Changed dependency from `[domain]` to `[domain?.id]`.
+ */
 
 const SectionCard = ({ title, icon, children, className = "" }) => (
   <section className={`bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden ${className}`}>
@@ -62,6 +89,9 @@ const DomainDetailPage = () => {
   const [whoisData, setWhoisData] = useState(null);
   const [whoisError, setWhoisError] = useState(null);
 
+  // Local state for real-time status updates
+  const [realtimeStatus, setRealtimeStatus] = useState(null);
+
   // Fetch Domain Function
   const fetchDomain = useCallback(async () => {
       const { data: domainData, error: domainError } = await supabase
@@ -87,11 +117,54 @@ const DomainDetailPage = () => {
 
   const { data: domain, loading, error: fetchError } = useNoCache(fetchDomain, [domainName]);
 
+  // Sync realtimeStatus with initial fetch
   useEffect(() => {
-    if (domain) {
+    if (domain?.status) {
+        setRealtimeStatus(domain.status);
+    }
+  }, [domain]); // This one is fine as it just syncs local state, unlikely to loop unless domain changes
+
+  // Subscribe to Realtime Updates for this domain
+  useEffect(() => {
+    if (!domain?.id) return;
+
+    const channel = supabase
+        .channel(`domain-detail-${domain.id}`)
+        .on(
+            'postgres_changes',
+            {
+                event: 'UPDATE',
+                schema: 'public',
+                table: 'domains',
+                filter: `id=eq.${domain.id}`,
+            },
+            (payload) => {
+                if (payload.new && payload.new.status) {
+                    setRealtimeStatus(payload.new.status);
+                    if (payload.new.status.toLowerCase() === 'sold') {
+                        toast({
+                            title: "Status Update",
+                            description: "This domain has just been marked as sold.",
+                            variant: "default",
+                        });
+                    }
+                }
+            }
+        )
+        .subscribe();
+
+    return () => {
+        supabase.removeChannel(channel);
+    };
+  }, [domain?.id, toast]);
+
+  // FIX: Infinite Loop Prevention
+  // Dependency changed from [domain] to [domain?.id] to prevent reference equality loops
+  useEffect(() => {
+    if (domain?.id) {
       fetchRecommended();
     }
-  }, [domain]);
+  }, [domain?.id]);
 
   useEffect(() => {
     let timer;
@@ -120,7 +193,7 @@ const DomainDetailPage = () => {
        timer = setTimeout(trackInterest, TRACKING_DELAY);
     }
     return () => clearInterval(timer);
-  }, [domain]);
+  }, [domain]); // This uses domain object but runs once due to session storage check
 
   useEffect(() => {
     const fetchInterestCount = async () => {
@@ -172,6 +245,7 @@ const DomainDetailPage = () => {
       const { data, error } = await supabase.from('domains').select('*').limit(20);
       if (error) throw error;
       if (data && data.length > 0) {
+        // Randomize but filter out current domain
         const shuffled = data.sort(() => 0.5 - Math.random());
         const filtered = shuffled.filter(d => d.name !== domainName).slice(0, 3);
         setRecommended(filtered);
@@ -185,6 +259,7 @@ const DomainDetailPage = () => {
   };
 
   const handleBuyNow = () => {
+    if (isSold) return;
     if (window.gtag) window.gtag('event', 'click_buy_now', { domain_name: domain.name, domain_price: domain.price });
     const productionUrl = "https://rdm.bz";
     const returnUrl = window.location.hostname === 'localhost' 
@@ -208,9 +283,19 @@ const DomainDetailPage = () => {
     window.location.href = `${baseUrl}?${params.toString()}`;
   };
 
-  const handleGoDaddyBuy = () => window.open(`https://godaddy.com/forsale/${domain.name}`, '_blank', 'noopener,noreferrer');
-  const handleMakeOffer = () => setShowOfferForm(true);
-  const handleWhatsAppContact = () => window.open(`https://wa.me/905313715417?text=${encodeURIComponent(`Is the domain ${domain.name} available?`)}`, '_blank');
+  const handleGoDaddyBuy = () => {
+      if (isSold) return;
+      window.open(`https://godaddy.com/forsale/${domain.name}`, '_blank', 'noopener,noreferrer');
+  }
+
+  const handleMakeOffer = () => {
+      if (isSold) return;
+      setShowOfferForm(true);
+  }
+
+  const handleWhatsAppContact = () => {
+      window.open(`https://wa.me/905313715417?text=${encodeURIComponent(`Is the domain ${domain.name} available?`)}`, '_blank');
+  }
   
   const handleWhoisLookup = async () => {
     if (isUnstoppable) {
@@ -246,6 +331,10 @@ const DomainDetailPage = () => {
       </div>
     );
   }
+
+  // Calculate sold status based on realtime updates
+  const currentDomainStatus = { ...domain, status: realtimeStatus || domain.status };
+  const isSold = isDomainSold(currentDomainStatus);
 
   const isUnstoppable = isUnstoppableDomain(domain.name);
   const domainLen = domain.name.split('.')[0].length;
@@ -292,7 +381,7 @@ const DomainDetailPage = () => {
       image: finalImage,
       url: currentUrl,
       price: domain.price,
-      status: domain.status,
+      status: realtimeStatus || domain.status, // Use realtime status
       category: domain.category,
       sku: domain.name
   };
@@ -332,7 +421,7 @@ const DomainDetailPage = () => {
                       logoUrl={domain.logo_url} 
                       altText={`${domain.name} - Premium Domain Logo`} 
                       domainName={domain.name} 
-                      className="mb-0"
+                      className={`mb-0 ${isSold ? 'grayscale opacity-80' : ''}`}
                       imageClassName="max-h-[160px] max-w-[280px]"
                       loading="eager" // Main image eager loaded
                     />
@@ -345,13 +434,14 @@ const DomainDetailPage = () => {
 
                <div className="flex-1 text-center lg:text-left relative z-10 w-full">
                   <div className="flex flex-wrap items-center justify-center lg:justify-start gap-3 mb-4">
-                     {domain.featured && <PremiumBadge variant="default" />}
+                     {domain.featured && !isSold && <PremiumBadge variant="default" />}
                      <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 ${
-                        domain.status === 'available' ? 'bg-emerald-50 text-emerald-700 border border-emerald-100' :
-                        domain.status === 'sold' ? 'bg-red-50 text-red-700 border border-red-100' : 'bg-amber-50 text-amber-700 border border-amber-100'
+                        isSold ? 'bg-red-50 text-red-700 border border-red-100' :
+                        (realtimeStatus || domain.status) === 'available' ? 'bg-emerald-50 text-emerald-700 border border-emerald-100' :
+                        'bg-amber-50 text-amber-700 border border-amber-100'
                       }`}>
-                        <span className={`w-2 h-2 rounded-full ${domain.status === 'available' ? 'bg-emerald-500' : domain.status === 'sold' ? 'bg-red-500' : 'bg-amber-500'}`}></span>
-                        {domain.status}
+                        <span className={`w-2 h-2 rounded-full ${isSold ? 'bg-red-500' : (realtimeStatus || domain.status) === 'available' ? 'bg-emerald-500' : 'bg-amber-500'}`}></span>
+                        {isSold ? 'SOLD' : (realtimeStatus || domain.status)}
                       </span>
                       <span className="px-3 py-1 bg-blue-50 text-blue-600 border border-blue-100 rounded-full text-xs font-bold uppercase tracking-wider flex items-center gap-1">
                         <Tag className="w-3 h-3" /> {domain.category}
@@ -384,7 +474,7 @@ const DomainDetailPage = () => {
                    <StatItem label="Length" value={`${domainLen} Chars`} icon={<BarChart3 className="w-5 h-5" />} />
                    <StatItem label="Extension" value={domain.tld} icon={<Globe className="w-5 h-5" />} />
                    <StatItem label="Type" value={domain.name.includes('-') ? 'Hyphenated' : 'Clean'} icon={<Check className="w-5 h-5" />} />
-                   <StatItem label="Est. Value" value="Premium" icon={<TrendingUp className="w-5 h-5" />} />
+                   <StatItem label="Est. Value" value={isSold ? "Sold" : "Premium"} icon={<TrendingUp className="w-5 h-5" />} />
                 </div>
 
                 <SectionCard title={`Domain Details for ${domain.name}`} icon={<FileText className="w-5 h-5" />}>
@@ -478,7 +568,13 @@ const DomainDetailPage = () => {
                     </h3>
                     
                     <div className="space-y-4">
-                       {isUnstoppable ? (
+                       {isSold ? (
+                          <div className="text-center p-4 bg-red-50 rounded-lg border border-red-100">
+                             <Lock className="w-10 h-10 text-red-500 mx-auto mb-2" />
+                             <h4 className="font-bold text-red-700">Domain Sold</h4>
+                             <p className="text-sm text-red-600">This domain is no longer available.</p>
+                          </div>
+                       ) : isUnstoppable ? (
                           <a href={getUnstoppableDomainsUrl(domain.name)} target="_blank" rel="noopener noreferrer">
                             <Button size="lg" className="w-full h-14 text-base font-bold bg-blue-600 hover:bg-blue-700">
                                <Globe className="w-5 h-5 mr-2" /> Buy via Unstoppable Domains
@@ -510,7 +606,7 @@ const DomainDetailPage = () => {
                        )}
                     </div>
 
-                    {timeLeft && timeLeft !== "EXPIRED" && (
+                    {timeLeft && timeLeft !== "EXPIRED" && !isSold && (
                        <div className="mt-6 pt-6 border-t border-slate-100">
                           <div className="flex items-center justify-between text-slate-500 mb-2">
                              <span className="text-xs font-bold uppercase tracking-wider flex items-center gap-1"><Clock className="w-3 h-3" /> Offer Expires In</span>
@@ -612,7 +708,7 @@ const DomainDetailPage = () => {
 
           </motion.div>
           
-          {showOfferForm && <MakeOfferForm domain={domain} onClose={() => setShowOfferForm(false)} />}
+          {showOfferForm && <MakeOfferForm domain={{...domain, status: realtimeStatus || domain.status}} onClose={() => setShowOfferForm(false)} />}
           <WhoisModal isOpen={isWhoisModalOpen} onClose={() => setIsWhoisModalOpen(false)} data={whoisData} loading={whoisLoading} error={whoisError} domain={domain.name} />
         </div>
       </div>

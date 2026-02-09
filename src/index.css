@@ -1,3 +1,4 @@
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -37,4 +38,14 @@ body {
 
 .premium-badge-glow-fast {
   animation: pulse-glow 2s infinite ease-in-out;
+}
+
+/* Disabled Button Styling */
+.btn-disabled {
+    @apply opacity-50 bg-gray-400 cursor-not-allowed pointer-events-none shadow-none ring-0 !important;
+    filter: grayscale(100%);
+}
+
+.btn-disabled:hover {
+    @apply bg-gray-400 shadow-none !important;
 }

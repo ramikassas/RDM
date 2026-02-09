@@ -2,13 +2,14 @@
 import React, { useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { ExternalLink, Tag, Globe } from 'lucide-react';
+import { ExternalLink, Tag, Globe, Lock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import PremiumBadge from '@/components/PremiumBadge';
 import DomainLogoDisplay from '@/components/DomainLogoDisplay';
 import { generateAutoDescription } from '@/utils/generateAutoDescription';
 import { getSupabaseImageUrl } from '@/utils/getSupabaseImageUrl';
 import { isUnstoppableDomain, getUnstoppableDomainsUrl } from '@/utils/unstoppableDomainsHelper';
+import { isDomainSold } from '@/utils/isDomainSold';
 
 const DomainCard = ({ domain, priority = false }) => {
   // Construct the descriptive alt text for SEO
@@ -16,6 +17,7 @@ const DomainCard = ({ domain, priority = false }) => {
   const loadingStrategy = priority ? "eager" : "lazy";
   
   const isUnstoppable = isUnstoppableDomain(domain.name);
+  const isSold = isDomainSold(domain);
 
   // Determine description to display
   const displayDescription = domain.description && domain.description.trim().length > 0
@@ -31,12 +33,19 @@ const DomainCard = ({ domain, priority = false }) => {
 
   return (
     <motion.div
-      whileHover={{ y: -4 }}
-      className="bg-white rounded-xl shadow-sm hover:shadow-md transition-all border border-slate-200 flex flex-col h-full overflow-hidden group"
+      whileHover={isSold ? {} : { y: -4 }}
+      className={`bg-white rounded-xl shadow-sm border border-slate-200 flex flex-col h-full overflow-hidden group ${isSold ? 'opacity-80' : 'hover:shadow-md transition-all'}`}
     >
-      <div className="p-5 md:p-6 flex-1 flex flex-col">
+      <div className="p-5 md:p-6 flex-1 flex flex-col relative">
+        {/* Sold Overlay/Badge */}
+        {isSold && (
+          <div className="absolute top-4 right-4 z-10 bg-red-500 text-white text-xs font-bold px-2 py-1 rounded shadow-sm flex items-center gap-1">
+            <Lock className="w-3 h-3" /> SOLD
+          </div>
+        )}
+
         {/* Logo Display Section */}
-        <div className="mb-4 -mt-2">
+        <div className={`mb-4 -mt-2 ${isSold ? 'grayscale opacity-75' : ''}`}>
           <DomainLogoDisplay 
             actualImageUrl={fullLogoUrl}
             logoUrl={domain.logo_url} // Fallback/Reference
@@ -65,7 +74,7 @@ const DomainCard = ({ domain, priority = false }) => {
           </div>
           
           <div className="flex items-center gap-2 shrink-0 flex-col-reverse sm:flex-row items-end sm:items-center">
-            {domain.featured && (
+            {domain.featured && !isSold && (
               <PremiumBadge variant="small" />
             )}
           </div>
@@ -89,7 +98,11 @@ const DomainCard = ({ domain, priority = false }) => {
             </span>
           </div>
           
-          {isUnstoppable ? (
+          {isSold ? (
+             <Button size="sm" className="btn-disabled" disabled title="This domain has been sold">
+                Sold <Lock className="ml-1.5 h-3.5 w-3.5" />
+             </Button>
+          ) : isUnstoppable ? (
             <a 
               href={getUnstoppableDomainsUrl(domain.name)}
               target="_blank"

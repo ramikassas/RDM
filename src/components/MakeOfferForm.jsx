@@ -1,12 +1,13 @@
 
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { X, AlertCircle, CheckCircle2, Loader2, DollarSign, Globe } from 'lucide-react';
+import { X, AlertCircle, CheckCircle2, Loader2, DollarSign, Globe, Lock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/lib/customSupabaseClient';
 import { useToast } from '@/components/ui/use-toast';
 import ConfirmationMessage from '@/components/ConfirmationMessage';
 import { isUnstoppableDomain, getUnstoppableDomainsUrl } from '@/utils/unstoppableDomainsHelper';
+import { isDomainSold } from '@/utils/isDomainSold';
 
 const MakeOfferForm = ({ domain, onClose }) => {
   const [formData, setFormData] = useState({
@@ -22,8 +23,10 @@ const MakeOfferForm = ({ domain, onClose }) => {
   const { toast } = useToast();
   
   const isUnstoppable = isUnstoppableDomain(domain?.name);
+  const isSold = isDomainSold(domain);
 
   const validateForm = () => {
+    if (isSold) return "This domain is sold and cannot be offered on.";
     if (!formData.buyer_name.trim()) return "Full Name is required.";
     if (!formData.email.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) return "A valid Email Address is required.";
     if (!formData.phone.trim()) return "Phone Number is required.";
@@ -36,6 +39,11 @@ const MakeOfferForm = ({ domain, onClose }) => {
     e.preventDefault();
     setValidationError(null);
     
+    if (isSold) {
+        setValidationError("This domain is sold and cannot be offered on.");
+        return;
+    }
+
     const error = validateForm();
     if (error) {
       setValidationError(error);
@@ -136,7 +144,7 @@ const MakeOfferForm = ({ domain, onClose }) => {
 
         <div className="p-6 max-h-[80vh] overflow-y-auto">
           {/* Conditional Rendering for Unstoppable Domains */}
-          {isUnstoppable ? (
+          {isUnstoppable && !isSold ? (
             <div className="text-center py-6">
               <div className="mx-auto w-16 h-16 bg-blue-50 rounded-full flex items-center justify-center mb-4">
                 <Globe className="h-8 w-8 text-blue-600" />
@@ -161,6 +169,19 @@ const MakeOfferForm = ({ domain, onClose }) => {
                 </Button>
               </div>
             </div>
+          ) : isSold ? (
+             <div className="text-center py-6">
+                <div className="mx-auto w-16 h-16 bg-red-50 rounded-full flex items-center justify-center mb-4">
+                    <Lock className="h-8 w-8 text-red-500" />
+                </div>
+                <h3 className="text-xl font-bold text-slate-900 mb-2">Domain Sold</h3>
+                <p className="text-slate-600 mb-6">
+                    This domain has been sold and is no longer available for offers.
+                </p>
+                <Button variant="outline" onClick={onClose} className="w-full">
+                    Close Window
+                </Button>
+             </div>
           ) : (
             /* Existing Form Logic */
             submitted ? (

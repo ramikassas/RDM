@@ -22,19 +22,11 @@ const DomainLogoDisplay = ({
 
   // Synchronously derive finalUrl
   const finalUrl = useMemo(() => {
-    // LOGGING - Task 1C
-    // console.log(`DomainLogoDisplay [${domainName}] - input logoUrl:`, logoUrl, 'actualImageUrl:', actualImageUrl);
-    
     if (actualImageUrl) return actualImageUrl;
     if (logoUrl && domainName) return getSupabaseImageUrl(domainName, logoUrl);
     if (logoUrl) return logoUrl;
     return null;
   }, [actualImageUrl, logoUrl, domainName]);
-
-  // LOGGING - Check unavailability condition
-  // useEffect(() => {
-  //   console.log(`DomainLogoDisplay [${domainName}] - finalUrl:`, finalUrl, 'showUnavailable:', !finalUrl || error);
-  // }, [finalUrl, error, domainName]);
 
   // Effect to handle state reset when URL changes
   useEffect(() => {
@@ -42,9 +34,9 @@ const DomainLogoDisplay = ({
       setLoaded(false);
       setError(false);
     } else {
-      // If no URL, we consider it "loaded" as a fallback state immediately
+      // If no URL, we consider it "loaded" as a fallback state immediately (shows placeholder)
       setLoaded(true);
-      setError(false); // Not strictly an error, just empty
+      setError(false); 
     }
   }, [finalUrl]);
 
@@ -53,8 +45,9 @@ const DomainLogoDisplay = ({
     if (!finalUrl || loaded || error) return;
 
     const timer = setTimeout(() => {
+      // Only set error if still mounted and not loaded/errored
       if (!loaded && !error) {
-        console.warn(`Image load timed out for ${domainName}: ${finalUrl}`);
+        console.warn(`Image load timed out for ${domainName}`);
         setError(true);
       }
     }, LOAD_TIMEOUT_MS);
@@ -79,18 +72,16 @@ const DomainLogoDisplay = ({
     <div className={`flex justify-center ${className}`}>
       <div className="bg-slate-50 p-6 rounded-2xl border border-slate-100 flex flex-col items-center justify-center text-emerald-100/50 w-[180px] h-[100px] animate-in fade-in duration-700">
         <Globe className="w-12 h-12 text-slate-200 mb-1" strokeWidth={1.5} />
-        {/* Optional: Show domain name text instead of just icon? 
-            For now, just a clean icon as requested. */}
       </div>
     </div>
   );
 
-  // If no URL generated, render Fallback instead of nothing (Task 6/7)
+  // If no URL generated, render Fallback instead of nothing
   if (!finalUrl) {
     return <FallbackIcon />; 
   }
 
-  // Fallback UI if image fails to load (Task 6/7)
+  // Fallback UI if image fails to load
   if (error) {
     return <FallbackIcon />;
   }
@@ -130,13 +121,15 @@ const DomainLogoDisplay = ({
               ${imageClassName}
             `}
             onLoad={() => {
-              // console.log(`Image loaded successfully: ${domainName}`);
               setLoaded(true);
             }}
             onError={(e) => {
-              console.error(`Image failed to load: ${finalUrl}`);
-              setError(true);
-              setLoaded(true);
+              // Only log if it's a real failure, not just a cancelled request
+              if (finalUrl) {
+                 // console.error(`Image failed to load: ${finalUrl}`);
+                 setError(true);
+                 setLoaded(true);
+              }
             }}
           />
         </div>
