@@ -1,22 +1,37 @@
-
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { ExternalLink, Tag } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { supabase } from '@/lib/customSupabaseClient'; // تأكدنا من استيراد Supabase
 import PremiumBadge from '@/components/PremiumBadge';
 import DomainLogoDisplay from '@/components/DomainLogoDisplay';
 import { generateAutoDescription } from '@/utils/generateAutoDescription';
 
 const DomainCard = ({ domain, priority = false }) => {
-  // Construct the descriptive alt text for SEO
   const seoAltText = domain.logo_alt_text || `${domain.name} - Premium Domain Logo`;
   const loadingStrategy = priority ? "eager" : "lazy";
 
-  // Determine description to display
   const displayDescription = domain.description && domain.description.trim().length > 0
     ? domain.description
     : generateAutoDescription(domain.name);
+
+  // ✅ دالة إصلاح الرابط بناءً على الرابط الذي أرسلته لي
+  const resolveLogoUrl = (url) => {
+    if (!url) return null;
+    
+    // 1. إذا كان الرابط كاملاً وجاهزاً، نستخدمه فوراً
+    if (url.startsWith('http') || url.startsWith('https') || url.startsWith('data:')) {
+      return url;
+    }
+
+    // 2. إذا كان مجرد اسم ملف، نقوم بإنشاء الرابط الكامل من مخزن 'domain-logos'
+    // هذا يطابق الرابط الذي أرسلته: .../buckets/domain-logos
+    const { data } = supabase.storage.from('domain-logos').getPublicUrl(url);
+    return data.publicUrl;
+  };
+
+  const finalLogoUrl = resolveLogoUrl(domain.logo_url);
 
   return (
     <motion.div
@@ -25,10 +40,10 @@ const DomainCard = ({ domain, priority = false }) => {
     >
       <div className="p-5 md:p-6 flex-1 flex flex-col">
         {/* Logo Display Section */}
-        {domain.logo_url && (
+        {finalLogoUrl && (
           <div className="mb-4 -mt-2">
             <DomainLogoDisplay 
-              logoUrl={domain.logo_url}
+              logoUrl={finalLogoUrl} // ✅ نستخدم الرابط المعالج هنا
               altText={seoAltText}
               domainName={domain.name}
               className="mb-2" 
