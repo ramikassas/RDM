@@ -45,7 +45,7 @@ const HomePage = () => {
     "url": "https://rdm.bz",
     "logo": "https://horizons-cdn.hostinger.com/ee7df4d6-7fd2-45d0-8d5a-3495011e4290/6f612353b77a278934c95261de52dc7a.png",
     "description": "Premium marketplace for rare and exclusive domain names.",
-    "sameAs": ["https://twitter.com/rami_kassas", "https://linkedin.com/company/rdm-bz"],
+    "sameAs": ["https://x.com/rami_kassas", "https://instagram.com/rami.kassas"],
     "contactPoint": {
         "@type": "ContactPoint",
         "telephone": "+905313715417",
