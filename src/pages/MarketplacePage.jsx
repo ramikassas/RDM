@@ -3,7 +3,7 @@ import { Search, SlidersHorizontal, Grid, List, Filter, ChevronDown } from 'luci
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/lib/customSupabaseClient';
 import DomainCard from '@/components/DomainCard';
-import SEO from '@/components/SEO';
+import SEOHead from '@/components/SEOHead';
 import { usePageSEO } from '@/hooks/usePageSEO';
 import Breadcrumbs from '@/components/Breadcrumbs';
 import { motion } from 'framer-motion';
@@ -20,16 +20,19 @@ const MarketplacePage = () => {
   const [loading, setLoading] = useState(true);
   const { seoData } = usePageSEO('marketplace');
   
+  // Filters State
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedTLD, setSelectedTLD] = useState([]);
   const [selectedCategories, setSelectedCategories] = useState([]);
   const [priceRange, setPriceRange] = useState([0, 100000]); 
+  // ✅ تعديل 1: رفع الحد الأقصى لطول الاسم
   const [lengthRange, setLengthRange] = useState([1, 65]); 
   const [sortBy, setSortBy] = useState('newest'); 
   const [viewMode, setViewMode] = useState('grid');
   const [showMobileFilters, setShowMobileFilters] = useState(false);
   const [isCategoriesExpanded, setIsCategoriesExpanded] = useState(false);
 
+  // Derived Options
   const [uniqueTLDs, setUniqueTLDs] = useState([]);
   const [uniqueCategories, setUniqueCategories] = useState([]);
   const [maxPrice, setMaxPrice] = useState(100000);
@@ -58,12 +61,14 @@ const MarketplacePage = () => {
 
     if (!error && data) {
       setDomains(data);
-      // 🔥 الإصلاح هنا: نملأ القائمة المعروضة فوراً بالبيانات قبل إيقاف التحميل
+      
+      // ✅ تعديل 2 (الحل السحري): نملأ قائمة العرض فوراً بالبيانات الخام قبل الفلترة
+      // هذا يمنع ظهور رسالة "No domains found" للحظة
       setFilteredDomains(data); 
 
+      // Calculate derived filter options
       const tlds = [...new Set(data.map(d => d.tld).filter(Boolean))];
       const cats = [...new Set(data.map(d => d.category).filter(Boolean))];
-      
       const maxP = Math.max(...data.map(d => Number(d.price) || 0), 100000);
       
       setUniqueTLDs(tlds);
@@ -71,16 +76,16 @@ const MarketplacePage = () => {
       setMaxPrice(maxP);
       setPriceRange([0, maxP]);
     }
-    // الآن نوقف التحميل بعد أن ضمنا وجود البيانات في القائمتين
     setLoading(false);
   };
 
   const applyFilters = () => {
-    // إذا كانت البيانات ما زالت تحمل، لا تقم بالفلترة لتجنب تفريغ القائمة
+    // ✅ حماية إضافية: إذا كان التحميل جارياً، لا تقم بتفريغ القائمة
     if (loading && domains.length === 0) return;
 
     let filtered = [...domains];
-    
+
+    // Search Query
     if (searchQuery) {
       const query = searchQuery.toLowerCase().trim();
       filtered = filtered.filter(domain => {
@@ -91,24 +96,29 @@ const MarketplacePage = () => {
       });
     }
 
+    // TLD Filter
     if (selectedTLD.length > 0) {
       filtered = filtered.filter(domain => selectedTLD.includes(domain.tld));
     }
 
+    // Category Filter
     if (selectedCategories.length > 0) {
       filtered = filtered.filter(domain => selectedCategories.includes(domain.category));
     }
 
+    // Price Range Filter
     filtered = filtered.filter(domain => 
       domain.price >= priceRange[0] && domain.price <= priceRange[1]
     );
 
+    // Length Filter
     filtered = filtered.filter(domain => {
       if (!domain.name) return false;
       const nameOnly = domain.name.split('.')[0];
       return nameOnly.length >= lengthRange[0] && nameOnly.length <= lengthRange[1];
     });
 
+    // Sort
     switch (sortBy) {
       case 'price-asc': filtered.sort((a, b) => a.price - b.price); break;
       case 'price-desc': filtered.sort((a, b) => b.price - a.price); break;
@@ -117,7 +127,7 @@ const MarketplacePage = () => {
       case 'length-asc': filtered.sort((a, b) => a.name.length - b.name.length); break;
       case 'newest': default: filtered.sort((a, b) => new Date(b.created_at) - new Date(a.created_at)); break;
     }
-    
+
     setFilteredDomains(filtered);
   };
 
@@ -125,45 +135,34 @@ const MarketplacePage = () => {
     setSearchQuery(e.target.value);
   };
 
-  const toggleTLD = (tld) => setSelectedTLD(prev => prev.includes(tld) ? prev.filter(t => t !== tld) : [...prev, tld]);
-  const toggleCategory = (cat) => setSelectedCategories(prev => prev.includes(cat) ? prev.filter(c => c !== cat) : [...prev, cat]);
+  const toggleTLD = (tld) => {
+    setSelectedTLD(prev => prev.includes(tld) ? prev.filter(t => t !== tld) : [...prev, tld]);
+  };
+
+  const toggleCategory = (cat) => {
+    setSelectedCategories(prev => prev.includes(cat) ? prev.filter(c => c !== cat) : [...prev, cat]);
+  };
+
   const resetFilters = () => {
     setSearchQuery('');
     setSelectedTLD([]);
     setSelectedCategories([]);
     setPriceRange([0, maxPrice]);
-    setLengthRange([1, 65]);
+    setLengthRange([1, 65]); // Reset to 65
     setSortBy('newest');
   };
 
-  const pageTitle = seoData?.h1_title || "Premium Domain Marketplace";
+  const pageTitle = seoData?.h1_title || "Marketplace";
   const pageHeading = seoData?.page_heading || `Found ${filteredDomains.length} premium assets matching your criteria`;
-
-  const collectionSchema = {
-    "@context": "https://schema.org",
-    "@type": "CollectionPage",
-    "name": "Rare Domains Marketplace (RDM) - Inventory",
-    "description": "Browse our collection of premium, rare, and exclusive domain names available for acquisition.",
-    "url": "https://rdm.bz/marketplace",
-    "mainEntity": {
-      "@type": "ItemList",
-      "itemListElement": filteredDomains.slice(0, 10).map((domain, index) => ({
-        "@type": "ListItem",
-        "position": index + 1,
-        "url": `https://rdm.bz/domain/${domain.name}`,
-        "name": domain.name
-      }))
-    }
-  };
 
   return (
     <>
-      <SEO 
-        title={seoData?.meta_title || "Premium Domain Marketplace | Buy & Sell Exclusive Digital Assets"}
-        description={seoData?.meta_description || "Browse premium domains for sale with advanced filters. Search by price, category, and TLD. Find valuable domain names for your business or investment."}
-        keywords={seoData?.meta_keywords || "buy domains, domain filter, domain search, premium domains, short domains, brandable domains"}
+      <SEOHead 
+        seoData={seoData}
+        defaultTitle="Premium Domain Marketplace | Buy & Sell Exclusive Digital Assets" 
+        defaultDescription="Browse premium domains for sale with advanced filters. Search by price, category, and TLD. Find valuable domain names for your business or investment."
+        defaultKeywords="buy domains, domain filter, domain search, premium domains, short domains, brandable domains"
         canonicalUrl="https://rdm.bz/marketplace"
-        schema={collectionSchema}
       />
 
       <div className="bg-slate-50 min-h-screen font-sans">
@@ -180,7 +179,11 @@ const MarketplacePage = () => {
             
             <div className="flex items-center gap-3">
               <span className="text-sm font-semibold text-slate-500 hidden sm:inline">Sort by:</span>
-              <select value={sortBy} onChange={(e) => setSortBy(e.target.value)} className="bg-white border border-slate-200 text-slate-900 text-sm rounded-lg focus:ring-emerald-500 focus:border-emerald-500 block p-2.5 shadow-sm">
+              <select 
+                value={sortBy} 
+                onChange={(e) => setSortBy(e.target.value)}
+                className="bg-white border border-slate-200 text-slate-900 text-sm rounded-lg focus:ring-emerald-500 focus:border-emerald-500 block p-2.5 shadow-sm"
+              >
                 <option value="newest">Newest Listed</option>
                 <option value="price-asc">Price: Low to High</option>
                 <option value="price-desc">Price: High to Low</option>
@@ -201,66 +204,60 @@ const MarketplacePage = () => {
 
           <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
             
-            {/* Mobile Filter Toggle */}
-            <div className="lg:hidden mb-4">
-               <Button 
-                 variant="outline" 
-                 onClick={() => setShowMobileFilters(!showMobileFilters)} 
-                 className={`w-full flex items-center justify-center gap-2 ${showMobileFilters ? 'bg-slate-900 text-white' : ''}`}
-               >
-                 <SlidersHorizontal className="h-4 w-4" />
-                 {showMobileFilters ? 'Hide Filters' : 'Show Advanced Filters'}
-               </Button>
-            </div>
-
-            {/* Filters Sidebar */}
+            {/* Sidebar Filters */}
             <div className={`lg:block ${showMobileFilters ? 'block' : 'hidden'}`}>
-              <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-5 lg:sticky lg:top-24 lg:max-h-[calc(100vh-8rem)] lg:overflow-y-auto custom-scrollbar">
+              <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-5 sticky top-24 max-h-[calc(100vh-8rem)] overflow-y-auto custom-scrollbar">
+                
                 <div className="flex items-center justify-between mb-6">
                   <h3 className="font-bold text-slate-900 flex items-center gap-2">
                     <Filter className="w-4 h-4" /> Filters
                   </h3>
-                  <button onClick={resetFilters} className="text-xs text-emerald-600 hover:text-emerald-700 font-medium">Reset All</button>
+                  <button onClick={resetFilters} className="text-xs text-emerald-600 hover:text-emerald-700 font-medium">
+                    Reset All
+                  </button>
                 </div>
 
                 <div className="space-y-6">
+                  {/* Search Input */}
                   <div>
-                      <Label className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2 block">Keyword</Label>
-                      <div className="relative">
-                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 h-4 w-4 pointer-events-none" />
-                        <input 
-                          type="text" 
-                          inputMode="search"
-                          placeholder="Search..." 
-                          value={searchQuery} 
+                     <Label className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2 block">Keyword</Label>
+                     <div className="relative">
+                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 h-4 w-4" />
+                        <input
+                          type="text"
+                          placeholder="Search..."
+                          value={searchQuery}
                           onChange={handleSearchChange}
-                          onInput={handleSearchChange} 
-                          className="w-full pl-9 pr-3 py-2 text-base sm:text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500" 
-                          autoComplete="off"
-                          autoCorrect="off"
-                          spellCheck="false"
+                          className="w-full pl-9 pr-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
                         />
-                      </div>
+                     </div>
                   </div>
 
+                  {/* Price Range */}
                   <div>
                     <div className="flex items-center justify-between mb-3">
                        <Label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Price Range</Label>
-                       <span className="text-xs font-medium text-slate-700">${priceRange[0].toLocaleString()} - ${priceRange[1].toLocaleString()}</span>
+                       <span className="text-xs font-medium text-slate-700">
+                         ${priceRange[0].toLocaleString()} - ${priceRange[1].toLocaleString()}
+                       </span>
                     </div>
                     <Slider defaultValue={[0, maxPrice]} value={priceRange} max={maxPrice} step={100} min={0} onValueChange={setPriceRange} className="py-4" />
                   </div>
 
+                  {/* Length Slider */}
                   <div>
                     <div className="flex items-center justify-between mb-3">
                        <Label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Name Length</Label>
-                       <span className="text-xs font-medium text-slate-700">{lengthRange[0]} - {lengthRange[1]} chars</span>
+                       <span className="text-xs font-medium text-slate-700">
+                         {lengthRange[0]} - {lengthRange[1]} chars
+                       </span>
                     </div>
                     <Slider defaultValue={[1, 65]} value={lengthRange} max={65} step={1} min={1} onValueChange={setLengthRange} className="py-4" />
                   </div>
 
-                  <Accordion type="multiple" defaultValue={['tld']} className="w-full">
-                    <AccordionItem value="tld" className="border-b-0">
+                  {/* Accordion Filters */}
+                  <Accordion type="multiple" defaultValue={['tld', 'category']} className="w-full">
+                    <AccordionItem value="tld">
                       <AccordionTrigger className="text-sm font-bold text-slate-800 hover:no-underline">Extensions (TLD)</AccordionTrigger>
                       <AccordionContent>
                         <div className="grid grid-cols-2 gap-2 pt-1">
@@ -273,42 +270,56 @@ const MarketplacePage = () => {
                         </div>
                       </AccordionContent>
                     </AccordionItem>
+
+                    {/* Manual Categories Section */}
+                    {/* استخدمنا هنا الكود الحديث مع Accordion بدلاً من motion للثبات */}
+                    <div className="border-t border-slate-200 pt-4">
+                      <button 
+                        onClick={() => setIsCategoriesExpanded(!isCategoriesExpanded)}
+                        className="flex items-center justify-between w-full text-sm font-bold text-slate-800 hover:text-emerald-600 transition-colors group py-2"
+                      >
+                        <span>Categories</span>
+                        <ChevronDown className={`h-4 w-4 text-slate-500 transition-transform duration-300 ${isCategoriesExpanded ? 'transform rotate-180' : ''} group-hover:text-emerald-600`} />
+                      </button>
+                      
+                      <motion.div
+                        initial={false}
+                        animate={{ 
+                          height: isCategoriesExpanded ? 'auto' : 0,
+                          opacity: isCategoriesExpanded ? 1 : 0
+                        }}
+                        transition={{ duration: 0.3, ease: 'easeInOut' }}
+                        className="overflow-hidden"
+                      >
+                        <div className="space-y-2 pt-3 pb-2">
+                          {uniqueCategories.map(cat => (
+                            <div key={cat} className="flex items-center space-x-2">
+                              <Checkbox id={`cat-${cat}`} checked={selectedCategories.includes(cat)} onCheckedChange={() => toggleCategory(cat)} />
+                              <label htmlFor={`cat-${cat}`} className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 text-slate-600 cursor-pointer hover:text-emerald-600 transition-colors">{cat}</label>
+                            </div>
+                          ))}
+                        </div>
+                      </motion.div>
+                    </div>
+
                   </Accordion>
-
-                  {/* Manual Categories Section */}
-                  <div className="border-t border-slate-200 pt-4">
-                    <button 
-                      onClick={() => setIsCategoriesExpanded(!isCategoriesExpanded)}
-                      className="flex items-center justify-between w-full text-sm font-bold text-slate-800 hover:text-emerald-600 transition-colors group py-2"
-                    >
-                      <span>Categories</span>
-                      <ChevronDown className={`h-4 w-4 text-slate-500 transition-transform duration-300 ${isCategoriesExpanded ? 'transform rotate-180' : ''} group-hover:text-emerald-600`} />
-                    </button>
-                    
-                    <motion.div
-                      initial={false}
-                      animate={{ 
-                        height: isCategoriesExpanded ? 'auto' : 0,
-                        opacity: isCategoriesExpanded ? 1 : 0
-                      }}
-                      transition={{ duration: 0.3, ease: 'easeInOut' }}
-                      className="overflow-hidden"
-                    >
-                      <div className="space-y-2 pt-3 pb-2">
-                        {uniqueCategories.map(cat => (
-                          <div key={cat} className="flex items-center space-x-2">
-                            <Checkbox id={`cat-${cat}`} checked={selectedCategories.includes(cat)} onCheckedChange={() => toggleCategory(cat)} />
-                            <label htmlFor={`cat-${cat}`} className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 text-slate-600 cursor-pointer hover:text-emerald-600 transition-colors">{cat}</label>
-                          </div>
-                        ))}
-                      </div>
-                    </motion.div>
-                  </div>
-
                 </div>
               </div>
             </div>
 
+            {/* Mobile Filter Toggle */}
+            <div className="lg:hidden mb-4">
+               <Button 
+                 variant="outline" 
+                 onClick={() => setShowMobileFilters(!showMobileFilters)}
+                 className={`w-full flex items-center justify-center gap-2 ${showMobileFilters ? 'bg-slate-900 text-white' : ''}`}
+               >
+                 <SlidersHorizontal className="h-4 w-4" />
+                 {showMobileFilters ? 'Hide Filters' : 'Show Advanced Filters'}
+               </Button>
+            </div>
+
+            {/* Results Grid */}
             <div className="lg:col-span-3">
               {loading ? (
                 <div className="flex flex-col items-center justify-center py-24 bg-white rounded-xl border border-slate-200 border-dashed">
@@ -318,21 +329,24 @@ const MarketplacePage = () => {
               ) : filteredDomains.length === 0 ? (
                 <div className="text-center py-24 bg-white rounded-xl shadow-sm border border-slate-200">
                   <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-slate-100 mb-4">
-                      <Search className="h-8 w-8 text-slate-400" />
+                     <Search className="h-8 w-8 text-slate-400" />
                   </div>
                   <h3 className="text-xl font-bold text-slate-900 mb-2">No domains found</h3>
-                  <p className="text-slate-600 mb-6 max-w-md mx-auto">We couldn't find any domains matching your specific criteria. Try adjusting your price range or removing some filters.</p>
-                  <Button onClick={resetFilters} variant="outline">Clear All Filters</Button>
+                  <p className="text-slate-600 mb-6 max-w-md mx-auto">
+                    We couldn't find any domains matching your specific criteria. Try adjusting your price range or removing some filters.
+                  </p>
+                  <Button onClick={resetFilters} variant="outline">
+                    Clear All Filters
+                  </Button>
                 </div>
               ) : (
-                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className={`grid ${viewMode === 'grid' ? 'grid-cols-1 md:grid-cols-2 xl:grid-cols-3' : 'grid-cols-1'} gap-6`}>
-                  {filteredDomains.map((domain, index) => (
-                    <DomainCard 
-                      key={domain.id} 
-                      domain={domain} 
-                      viewMode={viewMode} 
-                      priority={index === 0} // Eager load first item
-                    />
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  className={`grid ${viewMode === 'grid' ? 'grid-cols-1 md:grid-cols-2 xl:grid-cols-3' : 'grid-cols-1'} gap-6`}
+                >
+                  {filteredDomains.map((domain) => (
+                    <DomainCard key={domain.id} domain={domain} viewMode={viewMode} />
                   ))}
                 </motion.div>
               )}
