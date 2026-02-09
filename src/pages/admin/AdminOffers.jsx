@@ -1,6 +1,7 @@
+
 import React, { useEffect, useState } from 'react';
 import { supabase } from '@/lib/customSupabaseClient';
-import { ShoppingCart, Mail, Calendar, Eye, Phone, FileText, User, DollarSign, Globe, Hash, Check, X, ArrowLeft } from 'lucide-react';
+import { Mail, Calendar, Eye, User, Check, ArrowLeft, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/use-toast';
 import { Dialog, DialogContent } from "@/components/ui/dialog";
@@ -60,7 +61,6 @@ const AdminOffers = () => {
       <div className="min-h-screen bg-slate-50/50 pb-20">
         <div className="max-w-[1200px] mx-auto space-y-8 px-4 sm:px-6 lg:px-8 py-8">
           
-          {/* Header */}
           <div className="flex items-center justify-between">
              <div>
                 <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Offers & Bids</h1>
@@ -68,7 +68,6 @@ const AdminOffers = () => {
              </div>
           </div>
 
-          {/* Modern Table Card */}
           <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full text-left border-collapse">
@@ -132,13 +131,10 @@ const AdminOffers = () => {
           </div>
         </div>
 
-        {/* Premium Details Modal - Mobile Optimized & Redesigned */}
         <Dialog open={!!selectedOffer} onOpenChange={(open) => !open && setSelectedOffer(null)}>
           <DialogContent className="sm:max-w-[900px] w-full h-[100dvh] sm:h-auto sm:max-h-[90vh] p-0 gap-0 bg-white sm:rounded-2xl overflow-hidden flex flex-col border-0 shadow-2xl">
-            
             {selectedOffer && (
               <>
-                {/* Mobile Header - Fixed at top */}
                 <div className="shrink-0 flex sm:hidden items-center justify-between p-4 border-b border-slate-100 bg-white z-10">
                    <div className="flex items-center gap-3">
                      <Button variant="ghost" size="icon" className="-ml-2" onClick={() => setSelectedOffer(null)}>
@@ -151,13 +147,9 @@ const AdminOffers = () => {
                    </Button>
                 </div>
 
-                {/* Desktop Gradient Bar - Hidden on Mobile */}
                 <div className="shrink-0 hidden sm:block h-2 bg-gradient-to-r from-emerald-500 to-teal-500 w-full" />
                 
-                {/* Scrollable Content Area */}
                 <div className="flex-1 overflow-y-auto p-4 sm:p-8 space-y-6 sm:space-y-8">
-                  
-                  {/* Top Section: Domain & Amount */}
                   <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 sm:gap-6 pb-6 border-b border-slate-100">
                     <div className="space-y-1 w-full">
                        <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Domain Asset</label>
@@ -171,10 +163,7 @@ const AdminOffers = () => {
                     </div>
                   </div>
 
-                  {/* Details Grid */}
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-6 sm:gap-8">
-                    
-                    {/* Column 1: Status & Date */}
                     <div className="space-y-6">
                        <div className="space-y-2">
                           <label className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">Status</label>
@@ -197,7 +186,6 @@ const AdminOffers = () => {
                        </div>
                     </div>
 
-                    {/* Column 2: Buyer Details */}
                     <div className="space-y-6 md:col-span-2">
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                          <div className="space-y-2">
@@ -206,7 +194,10 @@ const AdminOffers = () => {
                          </div>
                          <div className="space-y-2">
                             <label className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">Email Address</label>
-                            <div className="text-base font-bold text-slate-900 break-all">{selectedOffer.email}</div>
+                            <div className="text-base font-bold text-slate-900 break-all flex items-center gap-2">
+                                <Mail className="w-4 h-4 text-slate-400" />
+                                {selectedOffer.email}
+                            </div>
                          </div>
                          <div className="space-y-2">
                             <label className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">Phone Number</label>
@@ -216,7 +207,6 @@ const AdminOffers = () => {
                     </div>
                   </div>
 
-                  {/* Message Section */}
                   <div className="space-y-3 pt-2">
                      <label className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">Buyer Message</label>
                      <div className="bg-slate-50 rounded-xl p-4 sm:p-6 text-slate-700 border border-slate-100 leading-relaxed">
@@ -228,13 +218,11 @@ const AdminOffers = () => {
                      </div>
                   </div>
                   
-                  {/* System ID */}
                   <div className="text-[10px] text-slate-300 font-mono uppercase tracking-widest pt-2">
                      ID: {selectedOffer.id}
                   </div>
                 </div>
 
-                {/* Footer Actions - Fixed at bottom for mobile */}
                 <div className="shrink-0 p-4 sm:p-6 bg-white border-t border-slate-100 flex flex-col-reverse sm:flex-row gap-3 sm:gap-4 sm:justify-end">
                    <Button 
                      variant="outline" 

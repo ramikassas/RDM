@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useToast } from '@/components/ui/use-toast';
 
@@ -37,6 +38,7 @@ export const CartProvider = ({ children }) => {
 
   const addToCart = (product, variant = null, quantity = 1, maxQuantity = null) => {
     setCartItems((prevItems) => {
+      // Find if item already exists
       const existingItemIndex = prevItems.findIndex(
         (item) => item.id === product.id && item.variantId === (variant?.id || null)
       );
@@ -46,6 +48,7 @@ export const CartProvider = ({ children }) => {
         const currentQty = newItems[existingItemIndex].quantity;
         const newQty = currentQty + quantity;
 
+        // Check stock limits if provided
         if (maxQuantity !== null && newQty > maxQuantity) {
           toast({
             title: "Limit reached",
@@ -63,6 +66,7 @@ export const CartProvider = ({ children }) => {
         });
         return newItems;
       } else {
+        // Check initial stock limits
         if (maxQuantity !== null && quantity > maxQuantity) {
           toast({
             title: "Limit reached",

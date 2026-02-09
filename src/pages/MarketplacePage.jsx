@@ -1,6 +1,6 @@
 
 import React, { useEffect, useState } from 'react';
-import { Search, SlidersHorizontal, Grid, List, Filter, X, ChevronDown } from 'lucide-react';
+import { Search, SlidersHorizontal, Grid, List, Filter } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/lib/customSupabaseClient';
 import DomainCard from '@/components/DomainCard';
@@ -21,7 +21,6 @@ const MarketplacePage = () => {
   const [loading, setLoading] = useState(true);
   const { seoData } = usePageSEO('marketplace');
   
-  // Filters State
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedTLD, setSelectedTLD] = useState([]);
   const [selectedCategories, setSelectedCategories] = useState([]);
@@ -31,7 +30,6 @@ const MarketplacePage = () => {
   const [viewMode, setViewMode] = useState('grid');
   const [showMobileFilters, setShowMobileFilters] = useState(false);
 
-  // Derived Options
   const [uniqueTLDs, setUniqueTLDs] = useState([]);
   const [uniqueCategories, setUniqueCategories] = useState([]);
   const [maxPrice, setMaxPrice] = useState(100000);
@@ -184,7 +182,6 @@ const MarketplacePage = () => {
 
           <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
             
-            {/* Sidebar Filters */}
             <div className={`lg:block ${showMobileFilters ? 'block' : 'hidden'}`}>
               <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-5 sticky top-24 max-h-[calc(100vh-8rem)] overflow-y-auto custom-scrollbar">
                 <div className="flex items-center justify-between mb-6">

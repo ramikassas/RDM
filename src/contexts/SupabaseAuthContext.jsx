@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useEffect, useState, useCallback, useMemo } from 'react';
 import { supabase } from '@/lib/customSupabaseClient';
 import { useToast } from '@/components/ui/use-toast';
@@ -10,42 +11,46 @@ export const AuthProvider = ({ children }) => {
   const [session, setSession] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  const handleSession = useCallback(async (session) => {
+  const handleSession = useCallback((session) => {
     setSession(session);
     setUser(session?.user ?? null);
     setLoading(false);
   }, []);
 
   useEffect(() => {
+    // Initial session check
     const getSession = async () => {
       try {
-        const { data: { session } } = await supabase.auth.getSession();
+        const { data: { session }, error } = await supabase.auth.getSession();
+        if (error) {
+          console.error("Error getting session:", error);
+          // Even on error, we must stop loading to allow the app to render
+          setLoading(false);
+          return;
+        }
         handleSession(session);
       } catch (error) {
-        console.error("Error getting session:", error);
+        console.error("Unexpected error getting session:", error);
         setLoading(false);
       }
     };
 
     getSession();
 
+    // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        if (event === 'SIGNED_OUT') {
-          setUser(null);
-          setSession(null);
-          setLoading(false);
-        } else {
-          handleSession(session);
-        }
+      (event, session) => {
+        handleSession(session);
       }
     );
 
-    return () => subscription.unsubscribe();
+    return () => {
+      subscription?.unsubscribe();
+    };
   }, [handleSession]);
 
   const signUp = useCallback(async (email, password, options) => {
-    const { error } = await supabase.auth.signUp({
+    const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options,
@@ -59,11 +64,11 @@ export const AuthProvider = ({ children }) => {
       });
     }
 
-    return { error };
+    return { data, error };
   }, [toast]);
 
   const signIn = useCallback(async (email, password) => {
-    const { error } = await supabase.auth.signInWithPassword({
+    const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
@@ -76,26 +81,23 @@ export const AuthProvider = ({ children }) => {
       });
     }
 
-    return { error };
+    return { data, error };
   }, [toast]);
 
   const signOut = useCallback(async () => {
     try {
+      const { error } = await supabase.auth.signOut();
+      if (error) throw error;
+      
       setUser(null);
       setSession(null);
-      
-      const { error } = await supabase.auth.signOut();
-
-      if (error) {
-        console.warn("Supabase signOut notice:", error.message);
-      }
-      
       return { error: null };
     } catch (err) {
-      console.error("Unexpected error during sign out:", err);
+      console.error("Error during sign out:", err);
+      // Force local state clear even if API fails
       setUser(null);
       setSession(null);
-      return { error: null };
+      return { error: err };
     }
   }, []);
 

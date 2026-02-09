@@ -1,10 +1,11 @@
+
 import React, { useEffect, useState } from 'react';
 import { supabase } from '@/lib/customSupabaseClient';
-import { Plus, Search, Edit, Trash2, Save, X, Star, LayoutGrid, List, AlignLeft, CheckSquare, Upload, AlertCircle, FileText, Calendar, FileImage as ImageIcon, Server } from 'lucide-react';
+import { Plus, Search, Edit, Trash2, CheckSquare, Upload, Star, FileImage as ImageIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/components/ui/use-toast';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import SEO from '@/components/SEO';
 import { formatDateOnly } from '@/utils/formatDate';
@@ -24,28 +25,18 @@ const AdminDomains = () => {
     price: '',
     status: 'available',
     featured: false,
-    
-    // Registry Info
     registry: '',
     transfer_type: '',
     renewal_price: '',
     listed_date: '',
     registration_date: '',
-    
-    // Marketing Details
     category: '',
     tagline: '',
     description: '',
     market_rationale: '',
-    
-    // Lists
     use_cases: '', 
     usp_points: '',
-    
-    // Technical
     technical_specifications: '',
-
-    // Logo
     logo_url: null,
     logo_alt_text: '',
     logo_uploaded_at: null
@@ -54,8 +45,6 @@ const AdminDomains = () => {
   // Bulk Import Modal State
   const [isBulkImportOpen, setIsBulkImportOpen] = useState(false);
   const [bulkImportText, setBulkImportText] = useState('');
-  const [bulkImportStatus, setBulkImportStatus] = useState(null);
-  const [bulkImportResult, setBulkImportResult] = useState(null);
 
   useEffect(() => {
     fetchDomains();
@@ -83,25 +72,19 @@ const AdminDomains = () => {
         price: parseFloat(formData.price) || 0,
         status: formData.status,
         featured: formData.featured,
-        
-        // Registry Info
         registry: formData.registry,
         transfer_type: formData.transfer_type,
         renewal_price: formData.renewal_price,
         listed_date: formData.listed_date || null,
         registration_date: formData.registration_date || null,
-        
         category: formData.category,
         tagline: formData.tagline,
         description: formData.description,
         market_rationale: formData.market_rationale,
         technical_specifications: formData.technical_specifications,
         tld: `.${formData.name.split('.').pop() || 'com'}`,
-        
         use_cases: formData.use_cases.split(',').map(s => s.trim()).filter(Boolean),
         usp_points: formData.usp_points.split(',').map(s => s.trim()).filter(Boolean),
-
-        // Logo fields
         logo_url: formData.logo_url,
         logo_alt_text: formData.logo_alt_text,
         logo_uploaded_at: formData.logo_uploaded_at
@@ -122,10 +105,6 @@ const AdminDomains = () => {
       if (error) throw error;
 
       toast({ title: "Success", description: `Domain ${editingId ? 'updated' : 'added'} successfully.` });
-      // We do NOT close modal here automatically if just creating, to allow adding logo
-      // But typically we might. For now, let's close it to be simple, or user can re-open.
-      // Actually, standard behavior is close. But if we want them to add logo immediately, we might keep it open.
-      // Let's stick to existing behavior: Close modal.
       setIsModalOpen(false);
       fetchDomains();
       return newId;
@@ -154,22 +133,18 @@ const AdminDomains = () => {
         price: domain.price || '',
         status: domain.status || 'available',
         featured: domain.featured || false,
-        
         registry: domain.registry || '',
         transfer_type: domain.transfer_type || '',
         renewal_price: domain.renewal_price || '',
         listed_date: domain.listed_date || '',
         registration_date: domain.registration_date ? domain.registration_date.split('T')[0] : '',
-        
         category: domain.category || '',
         tagline: domain.tagline || '',
         description: domain.description || '',
         market_rationale: domain.market_rationale || '',
         technical_specifications: domain.technical_specifications || '',
-        
         use_cases: (domain.use_cases || []).join(', '),
         usp_points: (domain.usp_points || []).join(', '),
-
         logo_url: domain.logo_url || null,
         logo_alt_text: domain.logo_alt_text || '',
         logo_uploaded_at: domain.logo_uploaded_at || null
@@ -199,7 +174,6 @@ const AdminDomains = () => {
       if (error) {
         toast({ variant: "destructive", title: "Error", description: "Failed to save logo details to domain." });
       } else {
-        // Optimistic update or refetch
         fetchDomains();
       }
     }
@@ -208,27 +182,6 @@ const AdminDomains = () => {
   const closeBulkImport = () => {
     setIsBulkImportOpen(false);
     setBulkImportText('');
-    setBulkImportStatus(null);
-    setBulkImportResult(null);
-  };
-
-  const handleBulkImport = async () => {
-      if (!bulkImportText.trim()) return;
-      setBulkImportStatus('processing');
-      try {
-        const lines = bulkImportText.split(/\r?\n/).filter(line => line.trim() !== '');
-        const newDomains = lines.map(line => {
-             const [name, price, cat] = line.split(',').map(s => s.trim());
-             return { name: name.toLowerCase(), price: parseFloat(price)||0, category: cat||'General', status: 'available', tld: `.${name.split('.').pop()}` };
-        });
-        const { error } = await supabase.from('domains').insert(newDomains);
-        if(error) throw error;
-        setBulkImportStatus('success');
-        setBulkImportResult({ added: newDomains.length, skipped: 0 });
-        fetchDomains();
-      } catch(e) {
-        setBulkImportStatus('error');
-      }
   };
 
   const filteredDomains = domains.filter(d => d.name.toLowerCase().includes(searchTerm.toLowerCase()));
@@ -473,9 +426,13 @@ const AdminDomains = () => {
           </DialogContent>
         </Dialog>
 
-        {/* Bulk Import Modal (Hidden code for brevity, same as previous) */}
+        {/* Bulk Import Modal */}
         <Dialog open={isBulkImportOpen} onOpenChange={closeBulkImport}>
-          <DialogContent><DialogTitle>Bulk Import</DialogTitle><p>Feature currently limited for demo.</p><Button onClick={closeBulkImport}>Close</Button></DialogContent>
+          <DialogContent>
+            <DialogTitle>Bulk Import</DialogTitle>
+            <p>Feature currently limited for demo.</p>
+            <Button onClick={closeBulkImport}>Close</Button>
+          </DialogContent>
         </Dialog>
       </div>
     </>

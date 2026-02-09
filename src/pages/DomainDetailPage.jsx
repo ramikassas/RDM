@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
@@ -38,9 +39,6 @@ import DomainCard from '@/components/DomainCard';
 import { formatDateOnly } from '@/utils/formatDate';
 import { getSupabaseImageUrl } from '@/utils/getSupabaseImageUrl';
 import { generateAutoDescription } from '@/utils/generateAutoDescription';
-import { generateSmartTitle } from '@/utils/generateSmartTitle';
-// Import generators for debug logging only, SEO component handles actual injection
-import { generateDomainSchema, getOrganizationSchema, generateBreadcrumbSchema } from '@/utils/schemaGenerator'; 
 
 // --- Helper Components ---
 const SectionCard = ({ title, icon, children, className = "" }) => (
@@ -304,18 +302,18 @@ const DomainDetailPage = () => {
   const domainLen = domain.name.split('.')[0].length;
 
   // --- SEO OPTIMIZATION LOGIC ---
-  const socialUrl = `https://rdm.bz/domain/${domainName}`;
+  const cleanDisplayTitle = domain.name;
+  
+  // Use page_title if available, otherwise generate a smart marketing title for SEO purposes
+  const seoTitle = domain.seo?.page_title || `Buy ${domain.name} - Premium ${domain.category || 'Digital'} Domain Name`;
+
+  // Standardized URLs pointing to /domain/ path for consistency
+  const socialUrl = `https://rdm.bz/domain/${domain.name}`;
   const currentUrl = `https://rdm.bz/domain/${domain.name}`;
   
   const listedDateDisplay = domain.listed_date ? formatDateOnly(domain.listed_date) : formatDateOnly(domain.created_at);
   const registrationDateDisplay = domain.registration_date ? formatDateOnly(domain.registration_date) : 'N/A';
 
-  // 1. Generate Smart Title using Utility
-  const smartTitle = generateSmartTitle(domain.name, domain.category, domain.tld);
-
-  // 2. Fallback Priority: Manual SEO Title -> Smart Title -> Basic Fallback
-  const seoTitle = domain.seo?.page_title || smartTitle;
-  const seoOgTitle = domain.seo?.og_title || seoTitle;
   const seoDescription = domain.description && domain.description.trim().length > 0
     ? domain.description
     : generateAutoDescription(domain.name);
@@ -344,9 +342,6 @@ const DomainDetailPage = () => {
 
   const finalCanonical = domain.seo?.canonical_url || currentUrl;
 
-  const displayH1 = domain.seo?.h1_title || seoTitle.split('|')[0].trim();
-  
-  // Explicitly construct data for SEO component to ensure fresh re-generation
   const domainSEOData = {
       name: domain.name,
       description: seoDescription,
@@ -357,20 +352,6 @@ const DomainDetailPage = () => {
       category: domain.category,
       sku: domain.name
   };
-
-  // Debug Logging for Verification
-  if (import.meta.env.MODE !== 'production') {
-    const debugSchema = generateDomainSchema(domainSEOData);
-    const debugOrg = getOrganizationSchema();
-    const debugBreadcrumb = generateBreadcrumbSchema(domain.name);
-    
-    console.group(`🔍 SEO SCHEMA DEBUG: ${domain.name}`);
-    console.log('✅ Fresh Data Loaded?', domain.name === domainName);
-    console.log('✅ Generated Product Schema:', debugSchema);
-    console.log('✅ Organization Schema SameAs:', debugOrg.sameAs);
-    console.log('✅ Breadcrumb Items:', debugBreadcrumb.itemListElement);
-    console.groupEnd();
-  }
 
   return (
     <>
@@ -385,15 +366,9 @@ const DomainDetailPage = () => {
         twitterUrl={socialUrl}
         twitterSite="@rami_kassas"
         canonicalUrl={finalCanonical}
-        
-        // Pass schema_data from DB if it exists. 
-        // NOTE: We do NOT pass organization schema here anymore because SEO.jsx now handles it globally
         schema={domain.seo?.schema_data && Object.keys(domain.seo.schema_data).length > 0 ? domain.seo.schema_data : null}
-        
-        // Passing domainData triggers auto-generation of Product schema inside SEO.jsx
         domainData={domainSEOData}
-        
-        ogTitle={seoOgTitle}
+        ogTitle={domain.seo?.og_title || seoTitle}
       />
       
       <div className="min-h-screen bg-slate-50 font-sans pb-16">
@@ -438,10 +413,10 @@ const DomainDetailPage = () => {
                       </span>
                   </div>
 
-                  <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-black text-slate-900 tracking-tight break-all mb-3 leading-tight">
-                    {displayH1}
-                    <span className="sr-only"> - Premium Domain for Sale</span>
+                  <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-slate-900 mb-6 tracking-tight leading-tight">
+                    {cleanDisplayTitle}
                   </h1>
+
                   <p className="text-lg text-slate-500 font-medium max-w-2xl mx-auto lg:mx-0 leading-relaxed">
                     {domain.tagline || `The perfect digital address for your next big venture in ${domain.category}.`}
                   </p>

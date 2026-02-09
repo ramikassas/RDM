@@ -1,4 +1,3 @@
-// Unused file replaced by SitemapHandler.jsx
-import React from 'react';
-const SitemapProxy = () => null;
-export default SitemapProxy;
+
+// File deleted by cleanup task. Replaced by SitemapHandler.jsx.
+export default () => null;

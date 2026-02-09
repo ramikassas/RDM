@@ -1,6 +1,7 @@
+
 import React, { useEffect, useState } from 'react';
 import { supabase } from '@/lib/customSupabaseClient';
-import { Plus, Eye, Trash2, ShoppingCart, DollarSign, User, Calendar, FileText, Check, X, ArrowLeft, Clock, Search, Mail } from 'lucide-react';
+import { Plus, Eye, Trash2, Check, ArrowLeft, X, Clock, Search, Mail, User, Calendar } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/components/ui/use-toast';
@@ -15,10 +16,8 @@ const AdminOrders = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const { toast } = useToast();
 
-  // Modals
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [selectedOrder, setSelectedOrder] = useState(null); // For viewing details
-  
+  const [selectedOrder, setSelectedOrder] = useState(null);
   const [editingId, setEditingId] = useState(null);
   const [formData, setFormData] = useState({
     domain_id: '',
@@ -123,7 +122,6 @@ const AdminOrders = () => {
       <div className="min-h-screen bg-slate-50/50 pb-20">
         <div className="max-w-[1200px] mx-auto space-y-8 px-4 sm:px-6 lg:px-8 py-8">
           
-          {/* Header Section */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
               <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Orders</h1>
@@ -145,10 +143,7 @@ const AdminOrders = () => {
             </div>
           </div>
 
-          {/* Content Section */}
           <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-            
-            {/* Desktop Table View */}
             <div className="hidden md:block overflow-x-auto">
               <table className="w-full text-left border-collapse">
                 <thead>
@@ -240,7 +235,6 @@ const AdminOrders = () => {
               </table>
             </div>
 
-            {/* Mobile Card View */}
             <div className="md:hidden divide-y divide-slate-100">
               {loading ? (
                 <div className="p-8 text-center text-slate-500">Loading...</div>
@@ -279,13 +273,10 @@ const AdminOrders = () => {
           </div>
         </div>
 
-        {/* View Order Details Modal - Premium Design */}
         <Dialog open={!!selectedOrder} onOpenChange={(open) => !open && setSelectedOrder(null)}>
           <DialogContent className="sm:max-w-[900px] w-full h-[100dvh] sm:h-auto sm:max-h-[90vh] p-0 gap-0 bg-white sm:rounded-2xl overflow-hidden flex flex-col border-0 shadow-2xl">
-             
              {selectedOrder && (
               <>
-                {/* Mobile Header */}
                 <div className="shrink-0 flex sm:hidden items-center justify-between p-4 border-b border-slate-100 bg-white z-10">
                    <div className="flex items-center gap-3">
                      <Button variant="ghost" size="icon" className="-ml-2" onClick={() => setSelectedOrder(null)}>
@@ -298,13 +289,9 @@ const AdminOrders = () => {
                    </Button>
                 </div>
 
-                {/* Desktop Gradient Bar */}
                 <div className="shrink-0 hidden sm:block h-2 bg-gradient-to-r from-emerald-500 to-teal-500 w-full" />
 
-                {/* Scrollable Content Area */}
                 <div className="flex-1 overflow-y-auto p-4 sm:p-8 space-y-6 sm:space-y-8">
-                  
-                  {/* Top Section: Domain & Amount */}
                   <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 sm:gap-6 pb-6 border-b border-slate-100">
                     <div className="space-y-1 w-full">
                        <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Domain Asset</label>
@@ -318,10 +305,7 @@ const AdminOrders = () => {
                     </div>
                   </div>
 
-                  {/* Details Grid */}
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-6 sm:gap-8">
-                    
-                    {/* Column 1: Status & Date */}
                     <div className="space-y-6">
                        <div className="space-y-2">
                           <label className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">Order Status</label>
@@ -340,7 +324,6 @@ const AdminOrders = () => {
                        </div>
                     </div>
 
-                    {/* Column 2: Buyer Details */}
                     <div className="space-y-6 md:col-span-2">
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                          <div className="space-y-2">
@@ -361,7 +344,6 @@ const AdminOrders = () => {
                     </div>
                   </div>
 
-                  {/* Notes Section */}
                   <div className="space-y-3 pt-2">
                      <label className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">Internal Notes / Message</label>
                      <div className="bg-slate-50 rounded-xl p-4 sm:p-6 text-slate-700 border border-slate-100 leading-relaxed">
@@ -373,13 +355,11 @@ const AdminOrders = () => {
                      </div>
                   </div>
                   
-                  {/* System ID */}
                   <div className="text-[10px] text-slate-300 font-mono uppercase tracking-widest pt-2">
                      Order ID: {selectedOrder.id}
                   </div>
                 </div>
 
-                 {/* Footer Actions */}
                 <div className="shrink-0 p-4 sm:p-6 bg-white border-t border-slate-100 flex flex-col-reverse sm:flex-row gap-3 sm:gap-4 sm:justify-end">
                    <Button 
                      variant="outline" 
@@ -405,7 +385,6 @@ const AdminOrders = () => {
           </DialogContent>
         </Dialog>
 
-        {/* Edit/Create Order Modal (Standard Form) */}
         <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
           <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
             <DialogHeader>

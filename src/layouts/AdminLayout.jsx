@@ -43,7 +43,6 @@ const AdminLayout = () => {
 
   const handleLogout = async () => {
     // Navigate immediately to home to prevent ProtectedRoute from showing LoginModal
-    // This removes the component from the tree before the user state is cleared
     navigate('/', { replace: true });
     
     try {

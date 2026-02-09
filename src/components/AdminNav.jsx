@@ -1,4 +1,3 @@
-// Unused file replaced by AdminLayout.jsx structure
-import React from 'react';
-const AdminNav = () => null;
-export default AdminNav;
+
+// File deleted by cleanup task. Replaced by AdminLayout.jsx.
+export default () => null;

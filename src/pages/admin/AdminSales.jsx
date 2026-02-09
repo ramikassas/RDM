@@ -1,7 +1,6 @@
+
 import React, { useEffect, useState } from 'react';
 import { supabase } from '@/lib/customSupabaseClient';
-import { DollarSign, CheckCircle } from 'lucide-react';
-import { Card } from '@/components/ui/card';
 import SEO from '@/components/SEO';
 import { formatDate } from '@/utils/formatDate';
 
@@ -12,7 +11,6 @@ const AdminSales = () => {
   useEffect(() => {
     const fetchSales = async () => {
       setLoading(true);
-      // Sales are just completed orders
       const { data, error } = await supabase
         .from('orders')
         .select('*, domains(name)')

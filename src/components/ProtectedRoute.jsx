@@ -4,26 +4,33 @@ import { useAuth } from '@/contexts/SupabaseAuthContext';
 import LoginModal from '@/components/LoginModal';
 
 const ProtectedRoute = ({ children }) => {
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
 
+  // Show nothing or a loader while auth state is being determined
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-50">
+        <div className="w-8 h-8 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
+      </div>
+    );
+  }
+
+  // If not authenticated, show the login modal instead of the protected content
   if (!user) {
-    // Instead of redirecting immediately, we can show the login modal
-    // Or simply redirect to home. Given the requirement is to "hide" admin access, 
-    // redirecting to 404 or home might be safer, but showing login on the specific URL is also standard.
-    // For "hidden" admin page, standard practice is usually show login form ON that page.
-    // Since we have a modal, we'll just render the modal.
-    
     return (
         <div className="min-h-screen flex items-center justify-center bg-slate-50">
-            <div className="text-center">
+            <div className="text-center p-8 bg-white rounded-xl shadow-sm border border-slate-200">
                 <h2 className="text-2xl font-bold text-slate-900 mb-4">Admin Access Required</h2>
-                <p className="text-slate-600 mb-6">Please authenticate to continue.</p>
-                <LoginModal onClose={() => {}} /> {/* Cannot close without logging in */}
+                <p className="text-slate-600 mb-6">Please sign in to access the dashboard.</p>
+                <div className="max-w-md mx-auto">
+                    <LoginModal onClose={() => {}} /> 
+                </div>
             </div>
         </div>
     );
   }
 
+  // If authenticated, render the child components (Admin Layout/Pages)
   return children;
 };
 

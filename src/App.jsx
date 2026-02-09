@@ -40,7 +40,6 @@ import DataMigration from '@/pages/admin/DataMigration';
 import SEOManagerPage from '@/pages/admin/SEOManagerPage';
 import FixSEOImages from '@/pages/admin/FixSEOImages';
 
-// Wrapper for Public Layout
 const PublicLayout = ({ children }) => (
   <div className="min-h-screen bg-slate-50 flex flex-col">
     <Header />
@@ -49,7 +48,6 @@ const PublicLayout = ({ children }) => (
   </div>
 );
 
-// Domain Query Helpers
 const fetchAvailableDomains = () => 
   supabase.from('domains').select('*').eq('status', 'available').order('price', { ascending: false });
 
@@ -63,20 +61,20 @@ function App() {
         <Router>
           <ScrollToTop />
           <Routes>
-            {/* SITEMAP GENERATION - Delegated to Edge Function via Handler */}
             <Route path="/sitemap.xml" element={<SitemapHandler />} />
 
-            {/* Public Routes */}
             <Route path="/" element={<PublicLayout><HomePage /></PublicLayout>} />
             <Route path="/marketplace" element={<PublicLayout><MarketplacePage /></PublicLayout>} />
+            
+            {/* Primary Domain Route - Keeps SEO unified */}
             <Route path="/domain/:domainName" element={<PublicLayout><DomainDetailPage /></PublicLayout>} />
+            
             <Route path="/about" element={<PublicLayout><AboutPage /></PublicLayout>} />
             <Route path="/contact" element={<PublicLayout><ContactPage /></PublicLayout>} />
             <Route path="/terms" element={<PublicLayout><TermsPage /></PublicLayout>} />
             <Route path="/privacy" element={<PublicLayout><PrivacyPage /></PublicLayout>} />
             <Route path="/transfer" element={<PublicLayout><TransferPage /></PublicLayout>} />
             
-            {/* Category SEO Pages */}
             <Route 
               path="/premium-domains-for-sale" 
               element={
@@ -162,7 +160,6 @@ function App() {
               } 
             />
 
-            {/* Admin Routes */}
             <Route path="/admin" element={<ProtectedRoute><AdminLayout /></ProtectedRoute>}>
               <Route index element={<DashboardHome />} />
               <Route path="domains" element={<AdminDomains />} />
@@ -178,11 +175,9 @@ function App() {
               <Route path="fix-seo-images" element={<FixSEOImages />} />
             </Route>
 
-            {/* Legacy Admin Redirects */}
             <Route path="/0955" element={<Navigate to="/admin" replace />} />
             <Route path="/leads" element={<Navigate to="/admin/offers" replace />} />
 
-            {/* Fallback */}
             <Route path="*" element={<PublicLayout><NotFoundPage /></PublicLayout>} />
           </Routes>
           <Toaster />
