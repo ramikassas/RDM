@@ -104,14 +104,8 @@ export const generateDomainSchema = (domain, domainData) => {
   const url = ensureAbsoluteUrl(data.url || `https://rdm.bz/domain/${cleanName}`);
   const sku = data.sku || cleanName;
   
-  // Price formatting: CRITICAL - MUST be a string
-  let priceStr = "0";
-  if (data.price !== undefined && data.price !== null) {
-    priceStr = String(data.price).replace(/[^0-9.]/g, '');
-    if (priceStr === '' || isNaN(parseFloat(priceStr))) {
-      priceStr = "0";
-    }
-  }
+  // Price formatting: CRITICAL - MUST be a string per requirements
+  const priceStr = String(data.price || '0');
 
   // Schema Construction
   return {
@@ -133,9 +127,7 @@ export const generateDomainSchema = (domain, domainData) => {
       "availability": getAvailabilityUrl(data.status),
       "url": url
     },
-    // Seller removed from offers to match standard Google Merchant center guidelines if needed, 
-    // or can be kept if strictly required by user. User prompt asked to remove nested seller object in Task 3.
-    // However, top level seller is good for marketplaces.
+    // Seller MUST be the complete Organization object
     "seller": getOrganizationSchema()
   };
 };

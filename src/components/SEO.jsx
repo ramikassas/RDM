@@ -14,7 +14,7 @@ const SEO = ({
   url,
   ogUrl,
   twitterUrl,
-  twitterSite = '@rami_kassas', // Updated default
+  twitterSite = '@rami_kassas',
   canonicalUrl,
   schema,
   breadcrumbSchema,
