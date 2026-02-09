@@ -1,5 +1,6 @@
+
 import React, { useEffect, useState } from 'react';
-import { Search, SlidersHorizontal, Grid, List, Filter, ChevronDown } from 'lucide-react';
+import { Search, SlidersHorizontal, Grid, List, Filter, X, ChevronDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/lib/customSupabaseClient';
 import DomainCard from '@/components/DomainCard';
@@ -11,7 +12,12 @@ import { useSearchParams } from 'react-router-dom';
 import { Slider } from '@/components/ui/slider';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
+import { 
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from '@/components/ui/accordion';
 
 const MarketplacePage = () => {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -24,23 +30,23 @@ const MarketplacePage = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedTLD, setSelectedTLD] = useState([]);
   const [selectedCategories, setSelectedCategories] = useState([]);
-  const [priceRange, setPriceRange] = useState([0, 100000]); 
-  // ✅ تعديل 1: رفع الحد الأقصى لطول الاسم
-  const [lengthRange, setLengthRange] = useState([1, 65]); 
+  const [priceRange, setPriceRange] = useState([0, 100000]); // Max price default
+  const [lengthRange, setLengthRange] = useState([1, 20]);
   const [sortBy, setSortBy] = useState('newest'); 
   const [viewMode, setViewMode] = useState('grid');
   const [showMobileFilters, setShowMobileFilters] = useState(false);
-  const [isCategoriesExpanded, setIsCategoriesExpanded] = useState(false);
 
   // Derived Options
   const [uniqueTLDs, setUniqueTLDs] = useState([]);
   const [uniqueCategories, setUniqueCategories] = useState([]);
   const [maxPrice, setMaxPrice] = useState(100000);
 
+  // 1. Fetch Domains on Mount
   useEffect(() => {
     fetchDomains();
   }, []);
 
+  // 2. Sync Search Query from URL
   useEffect(() => {
     const query = searchParams.get('search') || '';
     if (query !== searchQuery) {
@@ -48,6 +54,7 @@ const MarketplacePage = () => {
     }
   }, [searchParams]);
 
+  // 3. Apply Filters
   useEffect(() => {
     applyFilters();
   }, [domains, searchQuery, selectedTLD, selectedCategories, priceRange, lengthRange, sortBy]);
@@ -62,14 +69,10 @@ const MarketplacePage = () => {
     if (!error && data) {
       setDomains(data);
       
-      // ✅ تعديل 2 (الحل السحري): نملأ قائمة العرض فوراً بالبيانات الخام قبل الفلترة
-      // هذا يمنع ظهور رسالة "No domains found" للحظة
-      setFilteredDomains(data); 
-
       // Calculate derived filter options
       const tlds = [...new Set(data.map(d => d.tld).filter(Boolean))];
       const cats = [...new Set(data.map(d => d.category).filter(Boolean))];
-      const maxP = Math.max(...data.map(d => Number(d.price) || 0), 100000);
+      const maxP = Math.max(...data.map(d => d.price || 0), 100000);
       
       setUniqueTLDs(tlds);
       setUniqueCategories(cats);
@@ -80,9 +83,6 @@ const MarketplacePage = () => {
   };
 
   const applyFilters = () => {
-    // ✅ حماية إضافية: إذا كان التحميل جارياً، لا تقم بتفريغ القائمة
-    if (loading && domains.length === 0) return;
-
     let filtered = [...domains];
 
     // Search Query
@@ -111,21 +111,34 @@ const MarketplacePage = () => {
       domain.price >= priceRange[0] && domain.price <= priceRange[1]
     );
 
-    // Length Filter
+    // Length Filter (Name length without TLD dots if possible, though standard is full string)
+    // Assuming domain.name includes TLD, let's strip TLD for length calculation typically
     filtered = filtered.filter(domain => {
-      if (!domain.name) return false;
       const nameOnly = domain.name.split('.')[0];
       return nameOnly.length >= lengthRange[0] && nameOnly.length <= lengthRange[1];
     });
 
     // Sort
     switch (sortBy) {
-      case 'price-asc': filtered.sort((a, b) => a.price - b.price); break;
-      case 'price-desc': filtered.sort((a, b) => b.price - a.price); break;
-      case 'name-asc': filtered.sort((a, b) => a.name.localeCompare(b.name)); break;
-      case 'name-desc': filtered.sort((a, b) => b.name.localeCompare(a.name)); break;
-      case 'length-asc': filtered.sort((a, b) => a.name.length - b.name.length); break;
-      case 'newest': default: filtered.sort((a, b) => new Date(b.created_at) - new Date(a.created_at)); break;
+      case 'price-asc':
+        filtered.sort((a, b) => a.price - b.price);
+        break;
+      case 'price-desc':
+        filtered.sort((a, b) => b.price - a.price);
+        break;
+      case 'name-asc':
+        filtered.sort((a, b) => a.name.localeCompare(b.name));
+        break;
+      case 'name-desc':
+        filtered.sort((a, b) => b.name.localeCompare(a.name));
+        break;
+      case 'length-asc':
+        filtered.sort((a, b) => a.name.length - b.name.length);
+        break;
+      case 'newest':
+      default:
+        filtered.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+        break;
     }
 
     setFilteredDomains(filtered);
@@ -136,11 +149,15 @@ const MarketplacePage = () => {
   };
 
   const toggleTLD = (tld) => {
-    setSelectedTLD(prev => prev.includes(tld) ? prev.filter(t => t !== tld) : [...prev, tld]);
+    setSelectedTLD(prev => 
+      prev.includes(tld) ? prev.filter(t => t !== tld) : [...prev, tld]
+    );
   };
 
   const toggleCategory = (cat) => {
-    setSelectedCategories(prev => prev.includes(cat) ? prev.filter(c => c !== cat) : [...prev, cat]);
+    setSelectedCategories(prev => 
+      prev.includes(cat) ? prev.filter(c => c !== cat) : [...prev, cat]
+    );
   };
 
   const resetFilters = () => {
@@ -148,7 +165,7 @@ const MarketplacePage = () => {
     setSelectedTLD([]);
     setSelectedCategories([]);
     setPriceRange([0, maxPrice]);
-    setLengthRange([1, 65]); // Reset to 65
+    setLengthRange([1, 20]);
     setSortBy('newest');
   };
 
@@ -192,10 +209,16 @@ const MarketplacePage = () => {
               </select>
 
                <div className="flex items-center bg-white rounded-lg p-1 border border-slate-200 shadow-sm">
-                <button onClick={() => setViewMode('grid')} className={`p-2 rounded-md transition-all ${viewMode === 'grid' ? 'bg-slate-100 text-emerald-600' : 'text-slate-400 hover:text-slate-600'}`}>
+                <button
+                  onClick={() => setViewMode('grid')}
+                  className={`p-2 rounded-md transition-all ${viewMode === 'grid' ? 'bg-slate-100 text-emerald-600' : 'text-slate-400 hover:text-slate-600'}`}
+                >
                   <Grid className="h-4 w-4" />
                 </button>
-                <button onClick={() => setViewMode('list')} className={`p-2 rounded-md transition-all ${viewMode === 'list' ? 'bg-slate-100 text-emerald-600' : 'text-slate-400 hover:text-slate-600'}`}>
+                <button
+                  onClick={() => setViewMode('list')}
+                  className={`p-2 rounded-md transition-all ${viewMode === 'list' ? 'bg-slate-100 text-emerald-600' : 'text-slate-400 hover:text-slate-600'}`}
+                >
                   <List className="h-4 w-4" />
                 </button>
               </div>
@@ -204,7 +227,7 @@ const MarketplacePage = () => {
 
           <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
             
-            {/* Sidebar Filters */}
+            {/* Sidebar Filters - Desktop */}
             <div className={`lg:block ${showMobileFilters ? 'block' : 'hidden'}`}>
               <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-5 sticky top-24 max-h-[calc(100vh-8rem)] overflow-y-auto custom-scrollbar">
                 
@@ -218,7 +241,7 @@ const MarketplacePage = () => {
                 </div>
 
                 <div className="space-y-6">
-                  {/* Search Input */}
+                  {/* Search Input in Sidebar */}
                   <div>
                      <Label className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2 block">Keyword</Label>
                      <div className="relative">
@@ -233,7 +256,7 @@ const MarketplacePage = () => {
                      </div>
                   </div>
 
-                  {/* Price Range */}
+                  {/* Price Range Slider */}
                   <div>
                     <div className="flex items-center justify-between mb-3">
                        <Label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Price Range</Label>
@@ -241,7 +264,15 @@ const MarketplacePage = () => {
                          ${priceRange[0].toLocaleString()} - ${priceRange[1].toLocaleString()}
                        </span>
                     </div>
-                    <Slider defaultValue={[0, maxPrice]} value={priceRange} max={maxPrice} step={100} min={0} onValueChange={setPriceRange} className="py-4" />
+                    <Slider 
+                      defaultValue={[0, maxPrice]} 
+                      value={priceRange}
+                      max={maxPrice} 
+                      step={100} 
+                      min={0}
+                      onValueChange={setPriceRange}
+                      className="py-4"
+                    />
                   </div>
 
                   {/* Length Slider */}
@@ -252,62 +283,78 @@ const MarketplacePage = () => {
                          {lengthRange[0]} - {lengthRange[1]} chars
                        </span>
                     </div>
-                    <Slider defaultValue={[1, 65]} value={lengthRange} max={65} step={1} min={1} onValueChange={setLengthRange} className="py-4" />
+                    <Slider 
+                      defaultValue={[1, 20]} 
+                      value={lengthRange}
+                      max={20} 
+                      step={1} 
+                      min={1}
+                      onValueChange={setLengthRange}
+                      className="py-4"
+                    />
                   </div>
 
-                  {/* Accordion Filters */}
+                  {/* Accordion Filters - UPDATED ORDER: TLD FIRST, THEN CATEGORIES */}
                   <Accordion type="multiple" defaultValue={['tld', 'category']} className="w-full">
+                    
+                    {/* TLDs Section - Moved before Categories */}
                     <AccordionItem value="tld">
-                      <AccordionTrigger className="text-sm font-bold text-slate-800 hover:no-underline">Extensions (TLD)</AccordionTrigger>
+                      <AccordionTrigger className="text-sm font-bold text-slate-800 hover:no-underline">
+                        Extensions (TLD)
+                      </AccordionTrigger>
                       <AccordionContent>
                         <div className="grid grid-cols-2 gap-2 pt-1">
                           {uniqueTLDs.map(tld => (
                             <div key={tld} className="flex items-center space-x-2">
-                              <Checkbox id={`tld-${tld}`} checked={selectedTLD.includes(tld)} onCheckedChange={() => toggleTLD(tld)} />
-                              <label htmlFor={`tld-${tld}`} className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 text-slate-600 uppercase">.{tld}</label>
+                              <Checkbox 
+                                id={`tld-${tld}`} 
+                                checked={selectedTLD.includes(tld)}
+                                onCheckedChange={() => toggleTLD(tld)}
+                              />
+                              <label
+                                htmlFor={`tld-${tld}`}
+                                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 text-slate-600 uppercase"
+                              >
+                                .{tld}
+                              </label>
                             </div>
                           ))}
                         </div>
                       </AccordionContent>
                     </AccordionItem>
 
-                    {/* Manual Categories Section */}
-                    {/* استخدمنا هنا الكود الحديث مع Accordion بدلاً من motion للثبات */}
-                    <div className="border-t border-slate-200 pt-4">
-                      <button 
-                        onClick={() => setIsCategoriesExpanded(!isCategoriesExpanded)}
-                        className="flex items-center justify-between w-full text-sm font-bold text-slate-800 hover:text-emerald-600 transition-colors group py-2"
-                      >
-                        <span>Categories</span>
-                        <ChevronDown className={`h-4 w-4 text-slate-500 transition-transform duration-300 ${isCategoriesExpanded ? 'transform rotate-180' : ''} group-hover:text-emerald-600`} />
-                      </button>
-                      
-                      <motion.div
-                        initial={false}
-                        animate={{ 
-                          height: isCategoriesExpanded ? 'auto' : 0,
-                          opacity: isCategoriesExpanded ? 1 : 0
-                        }}
-                        transition={{ duration: 0.3, ease: 'easeInOut' }}
-                        className="overflow-hidden"
-                      >
-                        <div className="space-y-2 pt-3 pb-2">
+                    {/* Categories Section - Moved after TLDs */}
+                    <AccordionItem value="category">
+                      <AccordionTrigger className="text-sm font-bold text-slate-800 hover:no-underline">
+                        Categories
+                      </AccordionTrigger>
+                      <AccordionContent>
+                        <div className="space-y-2 pt-1">
                           {uniqueCategories.map(cat => (
                             <div key={cat} className="flex items-center space-x-2">
-                              <Checkbox id={`cat-${cat}`} checked={selectedCategories.includes(cat)} onCheckedChange={() => toggleCategory(cat)} />
-                              <label htmlFor={`cat-${cat}`} className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 text-slate-600 cursor-pointer hover:text-emerald-600 transition-colors">{cat}</label>
+                              <Checkbox 
+                                id={`cat-${cat}`} 
+                                checked={selectedCategories.includes(cat)}
+                                onCheckedChange={() => toggleCategory(cat)}
+                              />
+                              <label
+                                htmlFor={`cat-${cat}`}
+                                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 text-slate-600"
+                              >
+                                {cat}
+                              </label>
                             </div>
                           ))}
                         </div>
-                      </motion.div>
-                    </div>
+                      </AccordionContent>
+                    </AccordionItem>
 
                   </Accordion>
                 </div>
               </div>
             </div>
 
-            {/* Mobile Filter Toggle */}
+            {/* Mobile Filter Toggle Button */}
             <div className="lg:hidden mb-4">
                <Button 
                  variant="outline" 
