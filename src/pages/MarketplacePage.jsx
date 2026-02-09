@@ -1,5 +1,5 @@
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { Search, SlidersHorizontal, Grid, List, Filter, ChevronDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/lib/customSupabaseClient';
@@ -13,14 +13,14 @@ import { Slider } from '@/components/ui/slider';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
+import { useNoCache } from '@/hooks/useNoCache';
+import { DomainGridSkeleton } from '@/components/LoadingSkeleton';
 
 const MarketplacePage = () => {
   const [searchParams, setSearchParams] = useSearchParams();
-  const [domains, setDomains] = useState([]);
-  const [filteredDomains, setFilteredDomains] = useState([]);
-  const [loading, setLoading] = useState(true);
   const { seoData } = usePageSEO('marketplace');
   
+  // Initialize filter state
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedTLD, setSelectedTLD] = useState([]);
   const [selectedCategories, setSelectedCategories] = useState([]);
@@ -31,47 +31,52 @@ const MarketplacePage = () => {
   const [showMobileFilters, setShowMobileFilters] = useState(false);
   const [isCategoriesExpanded, setIsCategoriesExpanded] = useState(false);
 
+  // Derived unique values from data
   const [uniqueTLDs, setUniqueTLDs] = useState([]);
   const [uniqueCategories, setUniqueCategories] = useState([]);
   const [maxPrice, setMaxPrice] = useState(100000);
 
-  useEffect(() => {
-    fetchDomains();
-  }, []);
-
+  // Sync search query from URL
   useEffect(() => {
     const query = searchParams.get('search') || '';
     if (query !== searchQuery) {
-      console.log('Syncing search query from URL:', query);
       setSearchQuery(query);
     }
   }, [searchParams]);
 
-  useEffect(() => {
-    applyFilters();
-  }, [domains, searchQuery, selectedTLD, selectedCategories, priceRange, lengthRange, sortBy]);
-
-  const fetchDomains = async () => {
-    setLoading(true);
+  // Use no-cache hook to fetch data
+  const fetchDomains = React.useCallback(async () => {
     const { data, error } = await supabase
       .from('domains')
-      .select('*')
+      .select('*') 
       .order('created_at', { ascending: false });
 
-    if (!error && data) {
-      setDomains(data);
-      const tlds = [...new Set(data.map(d => d.tld).filter(Boolean))];
-      const cats = [...new Set(data.map(d => d.category).filter(Boolean))];
-      const maxP = Math.max(...data.map(d => d.price || 0), 100000);
+    if (error) throw error;
+    return data || [];
+  }, []);
+
+  const { data: domains, loading } = useNoCache(fetchDomains);
+
+  // Calculate filters once data is loaded
+  useEffect(() => {
+    if (domains && domains.length > 0) {
+      const tlds = [...new Set(domains.map(d => d.tld).filter(Boolean))];
+      const cats = [...new Set(domains.map(d => d.category).filter(Boolean))];
+      const maxP = Math.max(...domains.map(d => d.price || 0), 100000);
       setUniqueTLDs(tlds);
       setUniqueCategories(cats);
       setMaxPrice(maxP);
-      setPriceRange([0, maxP]);
+      // Only set price range if it hasn't been touched, or adjust max
+      if (priceRange[1] === 100000 && maxP !== 100000) {
+          setPriceRange([0, maxP]);
+      }
     }
-    setLoading(false);
-  };
+  }, [domains]);
 
-  const applyFilters = () => {
+  // Derived filtered state using useMemo
+  const filteredDomains = useMemo(() => {
+    if (!domains) return [];
+
     let filtered = [...domains];
     
     if (searchQuery) {
@@ -83,15 +88,19 @@ const MarketplacePage = () => {
         return nameMatch || descMatch || catMatch;
       });
     }
+    
     if (selectedTLD.length > 0) {
       filtered = filtered.filter(domain => selectedTLD.includes(domain.tld));
     }
+    
     if (selectedCategories.length > 0) {
       filtered = filtered.filter(domain => selectedCategories.includes(domain.category));
     }
+    
     filtered = filtered.filter(domain => 
       domain.price >= priceRange[0] && domain.price <= priceRange[1]
     );
+    
     filtered = filtered.filter(domain => {
       const nameOnly = domain.name.split('.')[0];
       return nameOnly.length >= lengthRange[0] && nameOnly.length <= lengthRange[1];
@@ -106,8 +115,8 @@ const MarketplacePage = () => {
       case 'newest': default: filtered.sort((a, b) => new Date(b.created_at) - new Date(a.created_at)); break;
     }
     
-    setFilteredDomains(filtered);
-  };
+    return filtered;
+  }, [domains, searchQuery, selectedTLD, selectedCategories, priceRange, lengthRange, sortBy]);
 
   const handleSearchChange = (e) => {
     setSearchQuery(e.target.value);
@@ -299,12 +308,10 @@ const MarketplacePage = () => {
 
             <div className="lg:col-span-3">
               {loading ? (
-                <div className="flex flex-col items-center justify-center py-24 bg-white rounded-xl border border-slate-200 border-dashed">
-                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-600 mb-4"></div>
-                  <p className="text-slate-500 font-medium">Scanning marketplace...</p>
-                </div>
+                // Replaced custom spinner with DomainGridSkeleton for smoother loading
+                <DomainGridSkeleton count={6} />
               ) : filteredDomains.length === 0 ? (
-                <div className="text-center py-24 bg-white rounded-xl shadow-sm border border-slate-200">
+                <div className="text-center py-24 bg-white rounded-xl shadow-sm border border-slate-200 animate-in fade-in zoom-in-95 duration-300">
                   <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-slate-100 mb-4">
                      <Search className="h-8 w-8 text-slate-400" />
                   </div>

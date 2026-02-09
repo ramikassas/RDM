@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from '@/components/ui/toaster';
 import { AuthProvider } from '@/contexts/SupabaseAuthContext';
@@ -48,6 +48,30 @@ const PublicLayout = ({ children }) => (
   </div>
 );
 
+// Component to inject anti-caching meta tags
+const CacheBuster = () => {
+  useEffect(() => {
+    // Add meta tags to head to prevent browser caching of the HTML
+    const metas = [
+      { name: 'Cache-Control', content: 'no-cache, no-store, must-revalidate' },
+      { name: 'Pragma', content: 'no-cache' },
+      { name: 'Expires', content: '0' }
+    ];
+
+    metas.forEach(metaDef => {
+      // Check if exists, update or create
+      let meta = document.querySelector(`meta[http-equiv="${metaDef.name}"]`);
+      if (!meta) {
+        meta = document.createElement('meta');
+        meta.httpEquiv = metaDef.name;
+        document.head.appendChild(meta);
+      }
+      meta.content = metaDef.content;
+    });
+  }, []);
+  return null;
+};
+
 const fetchAvailableDomains = () => 
   supabase.from('domains').select('*').eq('status', 'available').order('price', { ascending: false });
 
@@ -59,6 +83,7 @@ function App() {
     <AuthProvider>
       <CartProvider>
         <Router>
+          <CacheBuster />
           <ScrollPositionManager>
             <Routes>
               <Route path="/sitemap.xml" element={<SitemapHandler />} />

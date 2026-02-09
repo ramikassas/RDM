@@ -1,6 +1,7 @@
-import React, { useState, useEffect, useRef } from 'react';
+
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { motion } from 'framer-motion';
-import { ImageOff, Loader2 } from 'lucide-react';
+import { ImageOff, Loader2, Globe } from 'lucide-react';
 import { getSupabaseImageUrl } from '@/utils/getSupabaseImageUrl';
 
 const DomainLogoDisplay = ({ 
@@ -14,34 +15,38 @@ const DomainLogoDisplay = ({
 }) => {
   const [loaded, setLoaded] = useState(false);
   const [error, setError] = useState(false);
-  const [finalUrl, setFinalUrl] = useState('');
   const imgRef = useRef(null);
 
   // Constants for timeout
-  const LOAD_TIMEOUT_MS = 5000; 
+  const LOAD_TIMEOUT_MS = 8000; // Extended timeout
 
-  // Effect to construct the URL reliably
+  // Synchronously derive finalUrl
+  const finalUrl = useMemo(() => {
+    // LOGGING - Task 1C
+    // console.log(`DomainLogoDisplay [${domainName}] - input logoUrl:`, logoUrl, 'actualImageUrl:', actualImageUrl);
+    
+    if (actualImageUrl) return actualImageUrl;
+    if (logoUrl && domainName) return getSupabaseImageUrl(domainName, logoUrl);
+    if (logoUrl) return logoUrl;
+    return null;
+  }, [actualImageUrl, logoUrl, domainName]);
+
+  // LOGGING - Check unavailability condition
+  // useEffect(() => {
+  //   console.log(`DomainLogoDisplay [${domainName}] - finalUrl:`, finalUrl, 'showUnavailable:', !finalUrl || error);
+  // }, [finalUrl, error, domainName]);
+
+  // Effect to handle state reset when URL changes
   useEffect(() => {
-    let url = '';
-    
-    if (actualImageUrl) {
-      url = actualImageUrl;
-    } else if (logoUrl && domainName) {
-      // Use the utility to ensure correct path construction
-      url = getSupabaseImageUrl(domainName, logoUrl);
-    } else if (logoUrl) {
-      // Fallback if domainName missing but logoUrl exists (e.g. absolute URL)
-      url = logoUrl;
-    }
-
-    setFinalUrl(url);
-    
-    // Reset state when URL changes
-    if (url) {
+    if (finalUrl) {
       setLoaded(false);
       setError(false);
+    } else {
+      // If no URL, we consider it "loaded" as a fallback state immediately
+      setLoaded(true);
+      setError(false); // Not strictly an error, just empty
     }
-  }, [logoUrl, actualImageUrl, domainName]);
+  }, [finalUrl]);
 
   // Effect to handle stuck loading states (timeout)
   useEffect(() => {
@@ -62,34 +67,32 @@ const DomainLogoDisplay = ({
     if (imgRef.current && imgRef.current.complete) {
       if (imgRef.current.naturalWidth > 0) {
         setLoaded(true);
-      } else {
-        // If complete but width is 0, it might be a broken image
-        // We'll let onError handle it, or the timeout
       }
     }
   }, [finalUrl]);
 
-  // SEO-optimized attributes
   const finalAltText = altText || `${domainName} - Premium Domain Logo`;
   const finalTitle = `${domainName} - Premium Domain Logo`;
 
-  // If no URL generated, render nothing or fallback
+  // Fallback Component (Shared)
+  const FallbackIcon = () => (
+    <div className={`flex justify-center ${className}`}>
+      <div className="bg-slate-50 p-6 rounded-2xl border border-slate-100 flex flex-col items-center justify-center text-emerald-100/50 w-[180px] h-[100px] animate-in fade-in duration-700">
+        <Globe className="w-12 h-12 text-slate-200 mb-1" strokeWidth={1.5} />
+        {/* Optional: Show domain name text instead of just icon? 
+            For now, just a clean icon as requested. */}
+      </div>
+    </div>
+  );
+
+  // If no URL generated, render Fallback instead of nothing (Task 6/7)
   if (!finalUrl) {
-    // Optional: render placeholder if no URL is present at all
-    return null; 
+    return <FallbackIcon />; 
   }
 
-  // Fallback UI if image fails to load
+  // Fallback UI if image fails to load (Task 6/7)
   if (error) {
-    return (
-      <div className={`flex justify-center ${className}`}>
-        <div className="bg-slate-50 p-6 rounded-2xl border border-slate-200 flex flex-col items-center justify-center text-slate-400 w-[200px] h-[200px] animate-in fade-in">
-          <ImageOff className="w-8 h-8 mb-2 opacity-50" />
-          <span className="text-xs font-medium text-center">Logo Unavailable</span>
-          <span className="text-[10px] text-slate-300 mt-1 max-w-[150px] truncate">{domainName}</span>
-        </div>
-      </div>
-    );
+    return <FallbackIcon />;
   }
 
   return (
@@ -100,17 +103,21 @@ const DomainLogoDisplay = ({
       className={`flex justify-center ${className}`}
     >
       <div className="relative group w-full flex justify-center">
-        {/* Loading Skeleton - Only show if NOT loaded and NO error */}
+        {/* Loading Skeleton */}
         {!loaded && !error && (
           <div className="absolute inset-0 flex items-center justify-center z-0">
-             <div className="w-[200px] h-[200px] rounded-2xl bg-slate-50 border border-slate-100 flex items-center justify-center">
+             <div className="w-[180px] h-[100px] rounded-2xl bg-slate-50 border border-slate-100 flex items-center justify-center">
                 <Loader2 className="w-6 h-6 text-slate-300 animate-spin" />
              </div>
           </div>
         )}
         
         {/* Image Container */}
-        <div className={`bg-white p-4 sm:p-6 rounded-3xl shadow-lg shadow-slate-100 border border-slate-100 inline-block relative z-10 ${!loaded ? 'invisible' : 'visible'}`}>
+        <div className={`
+            bg-white p-4 rounded-xl inline-block relative z-10 
+            ${!loaded ? 'invisible h-[100px]' : 'visible'} 
+            transition-all duration-300
+        `}>
            <img 
             ref={imgRef}
             src={finalUrl} 
@@ -123,13 +130,13 @@ const DomainLogoDisplay = ({
               ${imageClassName}
             `}
             onLoad={() => {
-              // console.log(`Image loaded: ${finalUrl}`);
+              // console.log(`Image loaded successfully: ${domainName}`);
               setLoaded(true);
             }}
             onError={(e) => {
-              console.error(`Image failed to load: ${finalUrl}`, e);
+              console.error(`Image failed to load: ${finalUrl}`);
               setError(true);
-              setLoaded(true); // Stop loading spinner even on error
+              setLoaded(true);
             }}
           />
         </div>

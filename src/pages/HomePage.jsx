@@ -1,5 +1,5 @@
 
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Search, TrendingUp, Zap, ArrowRight, CheckCircle, Star, Award, Globe, ShieldCheck, MousePointerClick, Lightbulb } from 'lucide-react';
@@ -9,26 +9,28 @@ import { supabase } from '@/lib/customSupabaseClient';
 import DomainCard from '@/components/DomainCard';
 import SEO from '@/components/SEO';
 import { usePageSEO } from '@/hooks/usePageSEO';
+import { useNoCache } from '@/hooks/useNoCache';
+import { DomainGridSkeleton } from '@/components/LoadingSkeleton';
 
 const HomePage = () => {
-  const [featuredDomains, setFeaturedDomains] = useState([]);
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery, setSearchQuery] = React.useState('');
   const navigate = useNavigate();
   const { seoData } = usePageSEO('home');
 
-  useEffect(() => {
-    fetchFeaturedDomains();
+  // Use the no-cache hook to fetch domains
+  const fetchFeaturedDomains = React.useCallback(async () => {
+    const { data, error } = await supabase
+      .from('domains')
+      .select('*')
+      .eq('featured', true)
+      .eq('status', 'available')
+      .limit(6);
+      
+    if (error) throw error;
+    return data || [];
   }, []);
 
-  const fetchFeaturedDomains = async () => {
-    const {
-      data,
-      error
-    } = await supabase.from('domains').select('*').eq('featured', true).eq('status', 'available').limit(6);
-    if (!error && data) {
-      setFeaturedDomains(data);
-    }
-  };
+  const { data: featuredDomains, loading } = useNoCache(fetchFeaturedDomains);
 
   const handleSearch = e => {
     e.preventDefault();
@@ -156,20 +158,23 @@ const HomePage = () => {
         </section>
 
         {/* Featured Domains */}
-        {featuredDomains.length > 0 && <section className="py-24 bg-slate-50 border-t border-slate-200">
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-              <div className="flex justify-between items-end mb-12">
-                <div>
-                  <h2 className="text-3xl font-bold text-slate-900 mb-2">Featured Assets</h2>
-                  <p className="text-slate-600">Handpicked for their exceptional quality and potential.</p>
-                </div>
-                <Link to="/marketplace">
-                  <Button variant="outline" className="hidden md:flex border-slate-300 text-slate-700 hover:bg-white hover:text-emerald-600">
-                    View All Domains <ArrowRight className="ml-2 h-4 w-4" />
-                  </Button>
-                </Link>
+        <section className="py-24 bg-slate-50 border-t border-slate-200">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="flex justify-between items-end mb-12">
+              <div>
+                <h2 className="text-3xl font-bold text-slate-900 mb-2">Featured Assets</h2>
+                <p className="text-slate-600">Handpicked for their exceptional quality and potential.</p>
               </div>
-              
+              <Link to="/marketplace">
+                <Button variant="outline" className="hidden md:flex border-slate-300 text-slate-700 hover:bg-white hover:text-emerald-600">
+                  View All Domains <ArrowRight className="ml-2 h-4 w-4" />
+                </Button>
+              </Link>
+            </div>
+            
+            {loading ? (
+              <DomainGridSkeleton count={3} />
+            ) : featuredDomains && featuredDomains.length > 0 ? (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                 {featuredDomains.map((domain, index) => (
                   <DomainCard 
@@ -180,16 +185,19 @@ const HomePage = () => {
                   />
                 ))}
               </div>
+            ) : (
+              <div className="text-center text-slate-500 py-12">No featured domains currently available.</div>
+            )}
 
-              <div className="mt-12 text-center md:hidden">
-                <Link to="/marketplace">
-                  <Button variant="outline" className="w-full border-slate-300 text-slate-700">
-                    View All Domains <ArrowRight className="ml-2 h-4 w-4" />
-                  </Button>
-                </Link>
-              </div>
+            <div className="mt-12 text-center md:hidden">
+              <Link to="/marketplace">
+                <Button variant="outline" className="w-full border-slate-300 text-slate-700">
+                  View All Domains <ArrowRight className="ml-2 h-4 w-4" />
+                </Button>
+              </Link>
             </div>
-          </section>}
+          </div>
+        </section>
 
         {/* Informational Section (SEO & Education) */}
         <section className="py-24 bg-white border-t border-slate-100">

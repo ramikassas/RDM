@@ -1,5 +1,5 @@
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { 
@@ -20,6 +20,8 @@ import DomainCard from '@/components/DomainCard';
 import { formatDateOnly } from '@/utils/formatDate';
 import { getSupabaseImageUrl } from '@/utils/getSupabaseImageUrl';
 import { generateAutoDescription } from '@/utils/generateAutoDescription';
+import { useNoCache } from '@/hooks/useNoCache';
+import { DomainDetailSkeleton } from '@/components/LoadingSkeleton';
 
 const SectionCard = ({ title, icon, children, className = "" }) => (
   <section className={`bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden ${className}`}>
@@ -45,8 +47,6 @@ const StatItem = ({ label, value, icon }) => (
 
 const DomainDetailPage = () => {
   const { domainName } = useParams();
-  const [domain, setDomain] = useState(null);
-  const [loading, setLoading] = useState(true);
   const [showOfferForm, setShowOfferForm] = useState(false);
   const [interestCount, setInterestCount] = useState(0);
   const [timeLeft, setTimeLeft] = useState(null);
@@ -61,9 +61,30 @@ const DomainDetailPage = () => {
   const [whoisData, setWhoisData] = useState(null);
   const [whoisError, setWhoisError] = useState(null);
 
-  useEffect(() => {
-    fetchDomain();
+  // Fetch Domain Function
+  const fetchDomain = useCallback(async () => {
+      const { data: domainData, error: domainError } = await supabase
+        .from('domains')
+        .select('*')
+        .eq('name', domainName)
+        .single();
+      
+      if (domainError) throw domainError;
+
+      let seoData = null;
+      if (domainData) {
+        const { data: seo, error: seoError } = await supabase
+          .from('domain_seo_settings')
+          .select('*')
+          .eq('domain_id', domainData.id)
+          .maybeSingle();
+        if (!seoError) seoData = seo;
+      }
+
+      return domainData ? { ...domainData, seo: seoData } : null;
   }, [domainName]);
+
+  const { data: domain, loading, error: fetchError } = useNoCache(fetchDomain, [domainName]);
 
   useEffect(() => {
     if (domain) {
@@ -143,41 +164,6 @@ const DomainDetailPage = () => {
     return () => clearInterval(timer);
   }, [domain?.registration_date]);
 
-  const fetchDomain = async () => {
-    setLoading(true);
-    try {
-      const { data: domainData, error: domainError } = await supabase
-        .from('domains')
-        .select('*')
-        .eq('name', domainName)
-        .single();
-      
-      if (domainError) {
-        console.error('Error fetching domain:', domainError);
-        setLoading(false);
-        return;
-      }
-
-      let seoData = null;
-      if (domainData) {
-        const { data: seo, error: seoError } = await supabase
-          .from('domain_seo_settings')
-          .select('*')
-          .eq('domain_id', domainData.id)
-          .maybeSingle();
-        if (!seoError) seoData = seo;
-      }
-
-      if (domainData) {
-        setDomain({ ...domainData, seo: seoData });
-      }
-    } catch (err) {
-      console.error('Unexpected error in fetchDomain:', err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const fetchRecommended = async () => {
     setRecLoading(true);
     setRecError(false);
@@ -252,9 +238,9 @@ const DomainDetailPage = () => {
     }
   };
 
-  if (loading) return <div className="min-h-screen flex items-center justify-center bg-slate-50"><div className="inline-block animate-spin rounded-full h-10 w-10 border-b-2 border-emerald-600"></div></div>;
+  if (loading) return <div className="min-h-screen bg-slate-50"><DomainDetailSkeleton /></div>;
   
-  if (!domain) {
+  if (fetchError || !domain) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-slate-50 p-4 text-center">
         <AlertCircle className="h-12 w-12 text-slate-400 mb-4" />

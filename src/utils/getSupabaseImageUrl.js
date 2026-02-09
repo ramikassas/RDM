@@ -9,7 +9,13 @@
  * @returns {string} The complete, valid absolute Supabase Storage URL
  */
 export const getSupabaseImageUrl = (domainName, filenameOrUrl) => {
-  if (!domainName || !filenameOrUrl) return '';
+  // LOGGING - Task 1B
+  // console.log('getSupabaseImageUrl input:', {domainName, filenameOrUrl});
+
+  if (!domainName || !filenameOrUrl) {
+    // console.log('getSupabaseImageUrl output: null (missing input)');
+    return null;
+  }
 
   // Constants
   const SUPABASE_PROJECT_ID = 'ahttbqbzhggfdqupfnus';
@@ -22,11 +28,13 @@ export const getSupabaseImageUrl = (domainName, filenameOrUrl) => {
 
   // If it's already a full URL, validate and return it
   if (input.startsWith('http://') || input.startsWith('https://')) {
+    let finalUrl = input;
     // Force HTTPS
     if (input.startsWith('http://')) {
-      return input.replace('http://', 'https://');
+      finalUrl = input.replace('http://', 'https://');
     }
-    return input;
+    // console.log('getSupabaseImageUrl output (full URL):', finalUrl);
+    return finalUrl;
   }
 
   // Handle relative paths starting with /
@@ -35,11 +43,10 @@ export const getSupabaseImageUrl = (domainName, filenameOrUrl) => {
     filename = filename.substring(1);
   }
 
-  // If the filename contains path separators, assume it might be a full path within the bucket
-  // Otherwise, construct the standard path: bucket/domain/filename
-  // We prioritize the domain folder structure: domain-logos/example.com/logo.png
-  
-  return `${BASE_URL}/${cleanDomain}/${filename}`;
+  // Construct the standard path: bucket/domain/filename
+  const result = `${BASE_URL}/${cleanDomain}/${filename}`;
+  // console.log('getSupabaseImageUrl output (constructed):', result);
+  return result;
 };
 
 export default getSupabaseImageUrl;

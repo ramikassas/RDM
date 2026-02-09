@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { ExternalLink, Tag } from 'lucide-react';
@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import PremiumBadge from '@/components/PremiumBadge';
 import DomainLogoDisplay from '@/components/DomainLogoDisplay';
 import { generateAutoDescription } from '@/utils/generateAutoDescription';
+import { getSupabaseImageUrl } from '@/utils/getSupabaseImageUrl';
 
 const DomainCard = ({ domain, priority = false }) => {
   // Construct the descriptive alt text for SEO
@@ -18,25 +19,39 @@ const DomainCard = ({ domain, priority = false }) => {
     ? domain.description
     : generateAutoDescription(domain.name);
 
+  // Generate image URL synchronously
+  const fullLogoUrl = useMemo(() => {
+    // LOGGING - Task 1A
+    // console.log('DomainCard - domain:', domain.name, 'logo_url:', domain?.logo_url);
+    
+    if (!domain.logo_url) return null;
+    const url = getSupabaseImageUrl(domain.name, domain.logo_url);
+    
+    // console.log('DomainCard - calculated imageUrl:', url);
+    return url;
+  }, [domain.name, domain.logo_url]);
+
   return (
     <motion.div
       whileHover={{ y: -4 }}
       className="bg-white rounded-xl shadow-sm hover:shadow-md transition-all border border-slate-200 flex flex-col h-full overflow-hidden group"
     >
       <div className="p-5 md:p-6 flex-1 flex flex-col">
-        {/* Logo Display Section */}
-        {domain.logo_url && (
-          <div className="mb-4 -mt-2">
-            <DomainLogoDisplay 
-              logoUrl={domain.logo_url}
-              altText={seoAltText}
-              domainName={domain.name}
-              className="mb-2" 
-              imageClassName="max-h-24 max-w-[180px] p-0"
-              loading={loadingStrategy}
-            />
-          </div>
-        )}
+        {/* Logo Display Section 
+            ALWAYS render DomainLogoDisplay now, allowing it to handle the "no logo" state 
+            by showing a placeholder instead of nothing or an error.
+        */}
+        <div className="mb-4 -mt-2">
+          <DomainLogoDisplay 
+            actualImageUrl={fullLogoUrl}
+            logoUrl={domain.logo_url} // Fallback/Reference
+            altText={seoAltText}
+            domainName={domain.name}
+            className="mb-2" 
+            imageClassName="max-h-24 max-w-[180px] p-0"
+            loading={loadingStrategy}
+          />
+        </div>
 
         <div className="flex items-start justify-between mb-4 gap-3">
           <div className="flex-1 min-w-0">
