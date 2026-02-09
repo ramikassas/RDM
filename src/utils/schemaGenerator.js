@@ -1,4 +1,3 @@
-
 /**
  * Helper to validate/fix absolute URLs
  */
@@ -10,53 +9,69 @@ const ensureAbsoluteUrl = (url) => {
 };
 
 /**
+ * Generates a standard JSON-LD Organization schema for the brand
+ */
+export const generateOrganizationSchema = () => {
+  return {
+    "@context": "https://schema.org",
+    "@type": "Organization",
+    "name": "Rare Domains Marketplace (RDM)",
+    "url": "https://rdm.bz",
+    "logo": "https://rdm.bz/logo.png",
+    "sameAs": [
+      "https://instagram.com/rami_kassas",
+      "https://x.com/rami_kassas"
+    ],
+    "contactPoint": {
+      "@type": "ContactPoint",
+      "contactType": "customer service",
+      "email": "info@rdm.bz"
+    }
+  };
+};
+
+/**
  * Generates a standard JSON-LD Product schema for a domain with strict validation.
- * @param {Object} data - The domain data
- * @param {string} data.name - Domain name (Required)
- * @param {string} [data.description] - Description of the domain
- * @param {string} [data.image] - URL to the domain logo or social image
- * @param {string} [data.url] - Canonical URL of the domain detail page
- * @param {number} [data.price] - Price of the domain
- * @param {string} [data.status] - Status (available, sold, etc.)
- * @param {string} [data.currency] - Currency code (default: USD)
- * @param {string} [data.category] - Domain category
+ * @param {Object} domainData - The domain data object
  * @returns {Object} JSON-LD Schema object or null if invalid
  */
-export const generateDomainSchema = ({
-  name,
-  description,
-  image,
-  url,
-  price,
-  status = 'available',
-  currency = 'USD',
-  category = 'Domain Names'
-}) => {
-  if (!name) return null;
+export const generateDomainSchema = (domainData) => {
+  // Defensive check: ensure domainData exists and has a name
+  if (!domainData || !domainData.name) return null;
 
-  // 1. Strict Data Preparation
-  const cleanName = name.trim();
-  const cleanDescription = (description || `Premium domain name ${cleanName} is available for sale.`).replace(/"/g, '&quot;');
+  // 1. Strict Data Preparation & Defensive Fallbacks (Task 3)
+  const cleanName = domainData.name.trim();
+
+  // Description Fallback (Task 3.3)
+  const rawDescription = domainData.description || 'Premium domain available for purchase';
+  const cleanDescription = rawDescription.replace(/"/g, '&quot;');
   
-  // Ensure absolute URLs
-  const cleanImage = image ? ensureAbsoluteUrl(image) : 'https://rdm.bz/og-image.png';
-  const cleanUrl = url ? ensureAbsoluteUrl(url) : `https://rdm.bz/domain/${cleanName}`;
+  // Image Fallback (Task 3.4)
+  const rawImage = domainData.image || 'https://rdm.bz/default-domain-image.png';
+  const cleanImage = ensureAbsoluteUrl(rawImage);
+  
+  // URL Construction
+  const rawUrl = domainData.url || `https://rdm.bz/domain/${cleanName}`;
+  const cleanUrl = ensureAbsoluteUrl(rawUrl);
 
-  // Price validation: strictly numeric string, no currency symbols
-  let cleanPrice = "0";
-  if (price !== undefined && price !== null) {
-      // Remove $ or , if accidentally passed as string
-      cleanPrice = String(price).replace(/[^0-9.]/g, '');
-      if (isNaN(parseFloat(cleanPrice))) cleanPrice = "0";
-  }
+  // Price Validation & Fallback (Task 3.1)
+  let cleanPrice = domainData.price ? String(domainData.price) : '0';
+  // Additional safety: remove currency symbols if accidentally passed
+  cleanPrice = cleanPrice.replace(/[^0-9.]/g, ''); 
+  if (isNaN(parseFloat(cleanPrice))) cleanPrice = "0";
 
-  // Availability mapping
-  // If domain.status === "available": set availability to "https://schema.org/InStock"
-  // If domain.status === "sold": set availability to "https://schema.org/SoldOut"
-  // If domain.status === "pending": set availability to "https://schema.org/PreOrder"
-  // Default to "https://schema.org/InStock" for any other status
+  // Category Fallback (Task 3.2)
+  const cleanCategory = Array.isArray(domainData.category) 
+    ? domainData.category[0] 
+    : (domainData.category || 'Domain Names');
+
+  // SKU Fallback (Task 3.5)
+  const cleanSku = domainData.sku || cleanName || 'unknown';
+
+  // Availability Mapping
+  const status = domainData.status || 'available';
   let cleanAvailability = 'https://schema.org/InStock';
-  const statusLower = status?.toLowerCase();
+  const statusLower = status.toLowerCase();
 
   if (statusLower === 'sold') {
     cleanAvailability = 'https://schema.org/SoldOut';
@@ -64,7 +79,7 @@ export const generateDomainSchema = ({
     cleanAvailability = 'https://schema.org/PreOrder';
   }
 
-  // 2. Schema Construction - SINGLE CLEAN PRODUCT SCHEMA
+  // 2. Schema Construction
   const schema = {
     "@context": "https://schema.org",
     "@type": "Product",
@@ -72,15 +87,15 @@ export const generateDomainSchema = ({
     "description": cleanDescription,
     "image": cleanImage,
     "url": cleanUrl,
-    "sku": cleanName,
+    "sku": cleanSku,
     "brand": {
       "@type": "Brand",
       "name": cleanName
     },
-    "category": category || "Domain Names",
+    "category": cleanCategory,
     "offers": {
       "@type": "Offer",
-      "priceCurrency": currency || "USD",
+      "priceCurrency": domainData.currency || "USD",
       "price": cleanPrice,
       "itemCondition": "https://schema.org/NewCondition",
       "availability": cleanAvailability,
@@ -89,7 +104,12 @@ export const generateDomainSchema = ({
         "@type": "Organization",
         "name": "Rare Domains Marketplace (RDM)",
         "url": "https://rdm.bz",
-        "logo": "https://rdm.bz/logo.png"
+        "logo": "https://rdm.bz/logo.png",
+        // Task 2: Organization Social Media Updates
+        "sameAs": [
+          "https://instagram.com/rami_kassas",
+          "https://x.com/rami_kassas"
+        ]
       }
     }
   };
