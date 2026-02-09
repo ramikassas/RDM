@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { ExternalLink, Tag } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { supabase } from '@/lib/customSupabaseClient'; // تأكدنا من استيراد Supabase
+import { supabase } from '@/lib/customSupabaseClient'; // ضروري جداً لجلب الرابط الكامل
 import PremiumBadge from '@/components/PremiumBadge';
 import DomainLogoDisplay from '@/components/DomainLogoDisplay';
 import { generateAutoDescription } from '@/utils/generateAutoDescription';
@@ -16,21 +16,22 @@ const DomainCard = ({ domain, priority = false }) => {
     ? domain.description
     : generateAutoDescription(domain.name);
 
-  // ✅ دالة إصلاح الرابط بناءً على الرابط الذي أرسلته لي
+  // ✅ الوظيفة السحرية لإصلاح الروابط الناقصة
   const resolveLogoUrl = (url) => {
     if (!url) return null;
     
-    // 1. إذا كان الرابط كاملاً وجاهزاً، نستخدمه فوراً
+    // 1. إذا كان الرابط كاملاً أصلاً، نستخدمه كما هو
     if (url.startsWith('http') || url.startsWith('https') || url.startsWith('data:')) {
       return url;
     }
 
-    // 2. إذا كان مجرد اسم ملف، نقوم بإنشاء الرابط الكامل من مخزن 'domain-logos'
-    // هذا يطابق الرابط الذي أرسلته: .../buckets/domain-logos
+    // 2. إذا كان مجرد اسم ملف، نطلب من Supabase الرابط الكامل
+    // نستخدم اسم الـ Bucket الذي أكدته لي: 'domain-logos'
     const { data } = supabase.storage.from('domain-logos').getPublicUrl(url);
     return data.publicUrl;
   };
 
+  // تجهيز الرابط النهائي قبل العرض
   const finalLogoUrl = resolveLogoUrl(domain.logo_url);
 
   return (
@@ -39,11 +40,12 @@ const DomainCard = ({ domain, priority = false }) => {
       className="bg-white rounded-xl shadow-sm hover:shadow-md transition-all border border-slate-200 flex flex-col h-full overflow-hidden group"
     >
       <div className="p-5 md:p-6 flex-1 flex flex-col">
-        {/* Logo Display Section */}
+        
+        {/* نستخدم finalLogoUrl بدلاً من domain.logo_url */}
         {finalLogoUrl && (
           <div className="mb-4 -mt-2">
             <DomainLogoDisplay 
-              logoUrl={finalLogoUrl} // ✅ نستخدم الرابط المعالج هنا
+              logoUrl={finalLogoUrl}
               altText={seoAltText}
               domainName={domain.name}
               className="mb-2" 
