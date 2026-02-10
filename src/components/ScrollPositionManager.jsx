@@ -1,61 +1,62 @@
 
-import { useEffect, useRef } from 'react';
+import { useLayoutEffect, useRef } from 'react';
 import { useLocation, useNavigationType } from 'react-router-dom';
 
 const ScrollPositionManager = ({ children }) => {
   const location = useLocation();
-  const navType = useNavigationType();
+  const navType = useNavigationType(); // "POP", "PUSH", "REPLACE"
   const scrollYRef = useRef(0);
   const prevPathname = useRef(location.pathname);
 
-  // Disable browser's automatic scroll restoration to avoid conflicts
-  useEffect(() => {
+  // 1. Disable browser's automatic scroll restoration
+  useLayoutEffect(() => {
     if ('scrollRestoration' in window.history) {
       window.history.scrollRestoration = 'manual';
     }
+  }, []);
 
+  // 2. Track scroll position continuously
+  useLayoutEffect(() => {
     const handleScroll = () => {
       scrollYRef.current = window.scrollY;
     };
-
-    // Use passive listener for performance
+    
+    // Use passive listener for better scroll performance
     window.addEventListener('scroll', handleScroll, { passive: true });
-
-    return () => {
-      window.removeEventListener('scroll', handleScroll);
-    };
+    return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  useEffect(() => {
+  // 3. Handle Navigation and Restoration
+  useLayoutEffect(() => {
     const currentPath = location.pathname;
     
-    // Save scroll position for the page we just left
-    const saveKey = `scroll_position_${prevPathname.current}`;
-    sessionStorage.setItem(saveKey, scrollYRef.current.toString());
+    // Save position for the page we are LEAVING
+    // We use sessionStorage to persist across page reloads in same tab
+    if (prevPathname.current) {
+        const saveKey = `scroll_pos_${prevPathname.current}`;
+        sessionStorage.setItem(saveKey, scrollYRef.current.toString());
+    }
 
-    // Logic for restoring or resetting scroll
+    // Handle Restoration Logic based on navigation type
     if (navType === 'POP') {
-      // Back/Forward navigation: Restore position
-      const restoreKey = `scroll_position_${currentPath}`;
+      // POP means Back/Forward button was pressed
+      const restoreKey = `scroll_pos_${currentPath}`;
       const savedPosition = sessionStorage.getItem(restoreKey);
 
-      if (savedPosition) {
-        setTimeout(() => {
-          window.scrollTo(0, parseInt(savedPosition, 10));
-        }, 0);
-      } else {
-        // Fallback if no saved position exists
-        window.scrollTo(0, 0);
-      }
+      if (savedPosition !== null) {
+        const y = parseInt(savedPosition, 10);
+        // Instant restore before paint
+        window.scrollTo(0, y);
+      } 
     } else {
-      // PUSH or REPLACE: Scroll to top
+      // PUSH or REPLACE means new navigation -> Scroll to top
       window.scrollTo(0, 0);
     }
 
-    // Update reference to current path for next navigation
+    // Update ref for next navigation event
     prevPathname.current = currentPath;
 
-  }, [location, navType]);
+  }, [location.pathname, navType]); // Dependency array ensures this runs on route change
 
   return children;
 };

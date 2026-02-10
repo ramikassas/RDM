@@ -15,10 +15,13 @@ const DomainLogoDisplay = ({
 }) => {
   const [loaded, setLoaded] = useState(false);
   const [error, setError] = useState(false);
+  const [isVisible, setIsVisible] = useState(false);
+  const containerRef = useRef(null);
   const imgRef = useRef(null);
 
-  // Constants for timeout
-  const LOAD_TIMEOUT_MS = 8000; // Extended timeout
+  // Constants
+  const LOAD_TIMEOUT_MS = 8000;
+  const CACHE_KEY_PREFIX = 'img_loaded_';
 
   // Synchronously derive finalUrl
   const finalUrl = useMemo(() => {
@@ -28,24 +31,64 @@ const DomainLogoDisplay = ({
     return null;
   }, [actualImageUrl, logoUrl, domainName]);
 
-  // Effect to handle state reset when URL changes
+  // Check LocalStorage cache to skip animation if previously loaded
   useEffect(() => {
     if (finalUrl) {
-      setLoaded(false);
+      const cachedStatus = localStorage.getItem(CACHE_KEY_PREFIX + finalUrl);
+      if (cachedStatus === 'true') {
+        setLoaded(true);
+      }
+    }
+  }, [finalUrl]);
+
+  // Intersection Observer for Lazy Loading
+  useEffect(() => {
+    // If priority loading (eager), skip observer and show immediately
+    if (loading === 'eager') {
+      setIsVisible(true);
+      return;
+    }
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            setIsVisible(true);
+            observer.disconnect();
+          }
+        });
+      },
+      {
+        rootMargin: '100px 0px', // Start loading 100px before viewport
+        threshold: 0.01
+      }
+    );
+
+    if (containerRef.current) {
+      observer.observe(containerRef.current);
+    }
+
+    return () => {
+      if (observer) observer.disconnect();
+    };
+  }, [loading]);
+
+  // Reset state when URL changes
+  useEffect(() => {
+    if (finalUrl) {
+      // Don't reset loaded if cached, handled by first effect
       setError(false);
     } else {
-      // If no URL, we consider it "loaded" as a fallback state immediately (shows placeholder)
-      setLoaded(true);
+      setLoaded(true); // Treat missing URL as "loaded" fallback
       setError(false); 
     }
   }, [finalUrl]);
 
-  // Effect to handle stuck loading states (timeout)
+  // Timeout Watchdog
   useEffect(() => {
-    if (!finalUrl || loaded || error) return;
+    if (!finalUrl || loaded || error || !isVisible) return;
 
     const timer = setTimeout(() => {
-      // Only set error if still mounted and not loaded/errored
       if (!loaded && !error) {
         console.warn(`Image load timed out for ${domainName}`);
         setError(true);
@@ -53,21 +96,23 @@ const DomainLogoDisplay = ({
     }, LOAD_TIMEOUT_MS);
 
     return () => clearTimeout(timer);
-  }, [finalUrl, loaded, error, domainName]);
+  }, [finalUrl, loaded, error, domainName, isVisible]);
 
-  // Effect to check if image is already cached/loaded immediately
-  useEffect(() => {
-    if (imgRef.current && imgRef.current.complete) {
-      if (imgRef.current.naturalWidth > 0) {
-        setLoaded(true);
+  const handleLoad = () => {
+    setLoaded(true);
+    if (finalUrl) {
+      try {
+        localStorage.setItem(CACHE_KEY_PREFIX + finalUrl, 'true');
+      } catch (e) {
+        // Ignore storage quota errors
       }
     }
-  }, [finalUrl]);
+  };
 
   const finalAltText = altText || `${domainName} - Premium Domain Logo`;
   const finalTitle = `${domainName} - Premium Domain Logo`;
 
-  // Fallback Component (Shared)
+  // Fallback Component
   const FallbackIcon = () => (
     <div className={`flex justify-center ${className}`}>
       <div className="bg-slate-50 p-6 rounded-2xl border border-slate-100 flex flex-col items-center justify-center text-emerald-100/50 w-[180px] h-[100px] animate-in fade-in duration-700">
@@ -76,18 +121,13 @@ const DomainLogoDisplay = ({
     </div>
   );
 
-  // If no URL generated, render Fallback instead of nothing
-  if (!finalUrl) {
+  if (!finalUrl || error) {
     return <FallbackIcon />; 
-  }
-
-  // Fallback UI if image fails to load
-  if (error) {
-    return <FallbackIcon />;
   }
 
   return (
     <motion.div 
+      ref={containerRef}
       initial={{ opacity: 0, scale: 0.95 }}
       animate={{ opacity: 1, scale: 1 }}
       transition={{ duration: 0.5 }}
@@ -97,44 +137,40 @@ const DomainLogoDisplay = ({
         {/* Loading Skeleton */}
         {!loaded && !error && (
           <div className="absolute inset-0 flex items-center justify-center z-0">
-             <div className="w-[180px] h-[100px] rounded-2xl bg-slate-50 border border-slate-100 flex items-center justify-center">
+             <div className="w-[180px] h-[100px] rounded-2xl bg-slate-50 border border-slate-100 flex items-center justify-center animate-pulse">
                 <Loader2 className="w-6 h-6 text-slate-300 animate-spin" />
              </div>
           </div>
         )}
         
         {/* Image Container */}
-        <div className={`
-            bg-white p-4 rounded-xl inline-block relative z-10 
-            ${!loaded ? 'invisible h-[100px]' : 'visible'} 
-            transition-all duration-300
-        `}>
-           <img 
-            ref={imgRef}
-            src={finalUrl} 
-            alt={finalAltText}
-            title={finalTitle}
-            loading={loading}
-            className={`
-              w-auto h-auto object-contain
-              transition-opacity duration-500
-              ${imageClassName}
-            `}
-            onLoad={() => {
-              setLoaded(true);
-            }}
-            onError={(e) => {
-              // Only log if it's a real failure, not just a cancelled request
-              if (finalUrl) {
-                 // console.error(`Image failed to load: ${finalUrl}`);
+        {isVisible && (
+           <div className={`
+              bg-white p-4 rounded-xl inline-block relative z-10 
+              ${!loaded ? 'invisible h-[100px]' : 'visible'} 
+              transition-all duration-300
+          `}>
+             <img 
+              ref={imgRef}
+              src={finalUrl} 
+              alt={finalAltText}
+              title={finalTitle}
+              loading={loading} // Keep standard attribute as backup
+              className={`
+                w-auto h-auto object-contain
+                transition-opacity duration-500
+                ${imageClassName}
+              `}
+              onLoad={handleLoad}
+              onError={() => {
                  setError(true);
                  setLoaded(true);
-              }
-            }}
-          />
-        </div>
+              }}
+            />
+          </div>
+        )}
         
-        {/* Subtle reflection effect - only show when loaded */}
+        {/* Reflection effect */}
         {loaded && !error && (
           <div className="absolute -bottom-4 left-0 right-0 h-4 bg-gradient-to-t from-slate-50 to-transparent opacity-50 rounded-full blur-md -z-0" />
         )}

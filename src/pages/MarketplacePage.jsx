@@ -1,6 +1,6 @@
 
-import React, { useEffect, useState, useMemo } from 'react';
-import { Search, SlidersHorizontal, Grid, List, Filter, ChevronDown } from 'lucide-react';
+import React, { useEffect, useState, useMemo, useCallback } from 'react';
+import { Search, SlidersHorizontal, Grid, List, Filter, ChevronDown, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/lib/customSupabaseClient';
 import DomainCard from '@/components/DomainCard';
@@ -16,20 +16,36 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/
 import { useNoCache } from '@/hooks/useNoCache';
 import { DomainGridSkeleton } from '@/components/LoadingSkeleton';
 
+// Debounce utility to prevent rapid re-filtering
+const useDebounce = (value, delay) => {
+  const [debouncedValue, setDebouncedValue] = useState(value);
+  useEffect(() => {
+    const handler = setTimeout(() => setDebouncedValue(value), delay);
+    return () => clearTimeout(handler);
+  }, [value, delay]);
+  return debouncedValue;
+};
+
 const MarketplacePage = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const { seoData } = usePageSEO('marketplace');
   
   // Initialize filter state
   const [searchQuery, setSearchQuery] = useState('');
+  const debouncedSearchQuery = useDebounce(searchQuery, 300); // 300ms delay
+
   const [selectedTLD, setSelectedTLD] = useState([]);
   const [selectedCategories, setSelectedCategories] = useState([]);
-  const [priceRange, setPriceRange] = useState([0, 100000]); 
+  const [priceRange, setPriceRange] = useState([0, 100000]);
   const [lengthRange, setLengthRange] = useState([1, 20]);
   const [sortBy, setSortBy] = useState('newest'); 
   const [viewMode, setViewMode] = useState('grid');
   const [showMobileFilters, setShowMobileFilters] = useState(false);
   const [isCategoriesExpanded, setIsCategoriesExpanded] = useState(false);
+
+  // Pagination state
+  const ITEMS_PER_PAGE = 12;
+  const [visibleCount, setVisibleCount] = useState(ITEMS_PER_PAGE);
 
   // Derived unique values from data
   const [uniqueTLDs, setUniqueTLDs] = useState([]);
@@ -45,7 +61,7 @@ const MarketplacePage = () => {
   }, [searchParams]);
 
   // Use no-cache hook to fetch data
-  const fetchDomains = React.useCallback(async () => {
+  const fetchDomains = useCallback(async () => {
     const { data, error } = await supabase
       .from('domains')
       .select('*') 
@@ -66,21 +82,22 @@ const MarketplacePage = () => {
       setUniqueTLDs(tlds);
       setUniqueCategories(cats);
       setMaxPrice(maxP);
-      // Only set price range if it hasn't been touched, or adjust max
+      
       if (priceRange[1] === 100000 && maxP !== 100000) {
           setPriceRange([0, maxP]);
       }
     }
   }, [domains]);
 
-  // Derived filtered state using useMemo
+  // Derived filtered state using useMemo and debounced query
   const filteredDomains = useMemo(() => {
     if (!domains) return [];
 
     let filtered = [...domains];
     
-    if (searchQuery) {
-      const query = searchQuery.toLowerCase().trim();
+    // Use DEBOUNCED query for heavy filtering
+    if (debouncedSearchQuery) {
+      const query = debouncedSearchQuery.toLowerCase().trim();
       filtered = filtered.filter(domain => {
         const nameMatch = (domain.name || '').toLowerCase().includes(query);
         const descMatch = (domain.description || '').toLowerCase().includes(query);
@@ -116,7 +133,12 @@ const MarketplacePage = () => {
     }
     
     return filtered;
-  }, [domains, searchQuery, selectedTLD, selectedCategories, priceRange, lengthRange, sortBy]);
+  }, [domains, debouncedSearchQuery, selectedTLD, selectedCategories, priceRange, lengthRange, sortBy]);
+
+  // Reset pagination when filters change
+  useEffect(() => {
+    setVisibleCount(ITEMS_PER_PAGE);
+  }, [filteredDomains.length]); // Only reset when count changes (implying filter change)
 
   const handleSearchChange = (e) => {
     setSearchQuery(e.target.value);
@@ -133,25 +155,15 @@ const MarketplacePage = () => {
     setSortBy('newest');
   };
 
+  const handleLoadMore = () => {
+    setVisibleCount(prev => prev + ITEMS_PER_PAGE);
+  };
+
   const pageTitle = seoData?.h1_title || "Premium Domain Marketplace";
   const pageHeading = seoData?.page_heading || `Found ${filteredDomains.length} premium assets matching your criteria`;
 
-  const collectionSchema = {
-    "@context": "https://schema.org",
-    "@type": "CollectionPage",
-    "name": "Rare Domains Marketplace (RDM) - Inventory",
-    "description": "Browse our collection of premium, rare, and exclusive domain names available for acquisition.",
-    "url": "https://rdm.bz/marketplace",
-    "mainEntity": {
-      "@type": "ItemList",
-      "itemListElement": filteredDomains.slice(0, 10).map((domain, index) => ({
-        "@type": "ListItem",
-        "position": index + 1,
-        "url": `https://rdm.bz/domain/${domain.name}`,
-        "name": domain.name
-      }))
-    }
-  };
+  // Paginated subset
+  const visibleDomains = filteredDomains.slice(0, visibleCount);
 
   return (
     <>
@@ -160,7 +172,6 @@ const MarketplacePage = () => {
         description={seoData?.meta_description || "Browse premium domains for sale with advanced filters. Search by price, category, and TLD. Find valuable domain names for your business or investment."}
         keywords={seoData?.meta_keywords || "buy domains, domain filter, domain search, premium domains, short domains, brandable domains"}
         canonicalUrl="https://rdm.bz/marketplace"
-        schema={collectionSchema}
       />
 
       <div className="bg-slate-50 min-h-screen font-sans">
@@ -231,7 +242,6 @@ const MarketplacePage = () => {
                           placeholder="Search..." 
                           value={searchQuery} 
                           onChange={handleSearchChange}
-                          onInput={handleSearchChange} 
                           className="w-full pl-9 pr-3 py-2 text-base sm:text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500" 
                           autoComplete="off"
                           autoCorrect="off"
@@ -308,7 +318,6 @@ const MarketplacePage = () => {
 
             <div className="lg:col-span-3">
               {loading ? (
-                // Replaced custom spinner with DomainGridSkeleton for smoother loading
                 <DomainGridSkeleton count={6} />
               ) : filteredDomains.length === 0 ? (
                 <div className="text-center py-24 bg-white rounded-xl shadow-sm border border-slate-200 animate-in fade-in zoom-in-95 duration-300">
@@ -320,16 +329,29 @@ const MarketplacePage = () => {
                   <Button onClick={resetFilters} variant="outline">Clear All Filters</Button>
                 </div>
               ) : (
-                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className={`grid ${viewMode === 'grid' ? 'grid-cols-1 md:grid-cols-2 xl:grid-cols-3' : 'grid-cols-1'} gap-6`}>
-                  {filteredDomains.map((domain, index) => (
-                    <DomainCard 
-                      key={domain.id} 
-                      domain={domain} 
-                      viewMode={viewMode} 
-                      priority={index === 0} // Eager load first item
-                    />
-                  ))}
-                </motion.div>
+                <>
+                  <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className={`grid ${viewMode === 'grid' ? 'grid-cols-1 md:grid-cols-2 xl:grid-cols-3' : 'grid-cols-1'} gap-6`}>
+                    {visibleDomains.map((domain, index) => (
+                      <DomainCard 
+                        key={domain.id} 
+                        domain={domain} 
+                        viewMode={viewMode} 
+                        priority={index === 0} // Eager load first item
+                      />
+                    ))}
+                  </motion.div>
+                  
+                  {visibleCount < filteredDomains.length && (
+                    <div className="mt-12 text-center">
+                      <Button onClick={handleLoadMore} size="lg" variant="outline" className="min-w-[200px]">
+                        Load More Domains
+                      </Button>
+                      <p className="mt-2 text-xs text-slate-400">
+                        Showing {visibleCount} of {filteredDomains.length} domains
+                      </p>
+                    </div>
+                  )}
+                </>
               )}
             </div>
 

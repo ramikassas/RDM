@@ -11,7 +11,7 @@ import { getSupabaseImageUrl } from '@/utils/getSupabaseImageUrl';
 import { isUnstoppableDomain, getUnstoppableDomainsUrl } from '@/utils/unstoppableDomainsHelper';
 import { isDomainSold } from '@/utils/isDomainSold';
 
-const DomainCard = ({ domain, priority = false }) => {
+const DomainCard = React.memo(({ domain, priority = false }) => {
   // Construct the descriptive alt text for SEO
   const seoAltText = domain.logo_alt_text || `${domain.name} - Premium Domain Logo`;
   const loadingStrategy = priority ? "eager" : "lazy";
@@ -128,6 +128,6 @@ const DomainCard = ({ domain, priority = false }) => {
       </div>
     </motion.div>
   );
-};
+});
 
 export default DomainCard;

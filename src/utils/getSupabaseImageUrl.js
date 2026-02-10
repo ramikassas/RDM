@@ -3,18 +3,27 @@
  * Utility to generate the correct Supabase Storage URL for domain logos.
  * Enforces the structure: .../domain-logos/{domainName}/{filename}
  * Ensures all returned URLs are absolute and use https.
+ * Includes memoization to prevent redundant calculations.
  * 
  * @param {string} domainName - The domain name (e.g., "example.com")
  * @param {string} filenameOrUrl - The filename (e.g., "logo.png") or full URL
  * @returns {string} The complete, valid absolute Supabase Storage URL
  */
-export const getSupabaseImageUrl = (domainName, filenameOrUrl) => {
-  // LOGGING - Task 1B
-  // console.log('getSupabaseImageUrl input:', {domainName, filenameOrUrl});
 
+// Simple in-memory cache
+const urlCache = new Map();
+
+export const getSupabaseImageUrl = (domainName, filenameOrUrl) => {
   if (!domainName || !filenameOrUrl) {
-    // console.log('getSupabaseImageUrl output: null (missing input)');
     return null;
+  }
+
+  // Create a cache key
+  const cacheKey = `${domainName}|${filenameOrUrl}`;
+  
+  // Return cached result if available
+  if (urlCache.has(cacheKey)) {
+    return urlCache.get(cacheKey);
   }
 
   // Constants
@@ -33,7 +42,9 @@ export const getSupabaseImageUrl = (domainName, filenameOrUrl) => {
     if (input.startsWith('http://')) {
       finalUrl = input.replace('http://', 'https://');
     }
-    // console.log('getSupabaseImageUrl output (full URL):', finalUrl);
+    
+    // Cache and return
+    urlCache.set(cacheKey, finalUrl);
     return finalUrl;
   }
 
@@ -45,8 +56,14 @@ export const getSupabaseImageUrl = (domainName, filenameOrUrl) => {
 
   // Construct the standard path: bucket/domain/filename
   const result = `${BASE_URL}/${cleanDomain}/${filename}`;
-  // console.log('getSupabaseImageUrl output (constructed):', result);
+  
+  // Cache and return
+  urlCache.set(cacheKey, result);
   return result;
+};
+
+export const clearUrlCache = () => {
+  urlCache.clear();
 };
 
 export default getSupabaseImageUrl;
