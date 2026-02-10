@@ -11,40 +11,47 @@ export const AuthProvider = ({ children }) => {
   const [session, setSession] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  const handleSession = useCallback((session) => {
-    setSession(session);
-    setUser(session?.user ?? null);
+  // Centralized session handler to keep state in sync
+  const handleSession = useCallback((currentSession) => {
+    setSession(currentSession);
+    setUser(currentSession?.user ?? null);
     setLoading(false);
   }, []);
 
   useEffect(() => {
-    // Initial session check
+    let mounted = true;
+
+    // 1. Initial Session Check
     const getSession = async () => {
       try {
-        const { data: { session }, error } = await supabase.auth.getSession();
+        const { data: { session: initialSession }, error } = await supabase.auth.getSession();
+        
         if (error) {
           console.error("Error getting session:", error);
-          // Even on error, we must stop loading to allow the app to render
-          setLoading(false);
-          return;
         }
-        handleSession(session);
+        
+        if (mounted) {
+          handleSession(initialSession);
+        }
       } catch (error) {
         console.error("Unexpected error getting session:", error);
-        setLoading(false);
+        if (mounted) setLoading(false);
       }
     };
 
     getSession();
 
-    // Listen for auth changes
+    // 2. Real-time Auth State Listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
-        handleSession(session);
+      (_event, currentSession) => {
+        if (mounted) {
+          handleSession(currentSession);
+        }
       }
     );
 
     return () => {
+      mounted = false;
       subscription?.unsubscribe();
     };
   }, [handleSession]);
@@ -77,24 +84,36 @@ export const AuthProvider = ({ children }) => {
       toast({
         variant: "destructive",
         title: "Sign in Failed",
-        description: error.message || "Something went wrong",
+        description: error.message || "Invalid credentials.",
       });
     }
 
     return { data, error };
   }, [toast]);
 
+  // CRITICAL SECURITY FIX: Robust Sign Out
   const signOut = useCallback(async () => {
     try {
+      // 1. Clear local state immediately to update UI
+      setUser(null);
+      setSession(null);
+      setLoading(false);
+
+      // 2. Call Supabase API
       const { error } = await supabase.auth.signOut();
       if (error) throw error;
       
-      setUser(null);
-      setSession(null);
+      // 3. Clear any potential persistent storage manually as a failsafe
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('sb-access-token');
+        localStorage.removeItem('sb-refresh-token');
+        // Clear any app-specific keys if they existed
+      }
+
       return { error: null };
     } catch (err) {
       console.error("Error during sign out:", err);
-      // Force local state clear even if API fails
+      // Force state clear even if API fails to ensure user is "logged out" in the UI
       setUser(null);
       setSession(null);
       return { error: err };
@@ -105,6 +124,7 @@ export const AuthProvider = ({ children }) => {
     user,
     session,
     loading,
+    isAuthenticated: !!user,
     signUp,
     signIn,
     signOut,

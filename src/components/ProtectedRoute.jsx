@@ -1,36 +1,33 @@
 
-import React from 'react';
+import React, { useEffect } from 'react';
+import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/SupabaseAuthContext';
-import LoginModal from '@/components/LoginModal';
+import { Loader2 } from 'lucide-react';
 
 const ProtectedRoute = ({ children }) => {
   const { user, loading } = useAuth();
+  const location = useLocation();
 
-  // Show nothing or a loader while auth state is being determined
+  // Show a loading spinner while we determine auth state
+  // This prevents flashing the login screen or content prematurely
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-50">
-        <div className="w-8 h-8 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
+        <div className="flex flex-col items-center gap-3">
+          <Loader2 className="h-8 w-8 text-emerald-600 animate-spin" />
+          <p className="text-sm text-slate-500 font-medium">Verifying access...</p>
+        </div>
       </div>
     );
   }
 
-  // If not authenticated, show the login modal instead of the protected content
+  // CRITICAL: If not authenticated, redirect to /login immediately
+  // We pass 'state' so we can redirect back to the requested page after login
   if (!user) {
-    return (
-        <div className="min-h-screen flex items-center justify-center bg-slate-50">
-            <div className="text-center p-8 bg-white rounded-xl shadow-sm border border-slate-200">
-                <h2 className="text-2xl font-bold text-slate-900 mb-4">Admin Access Required</h2>
-                <p className="text-slate-600 mb-6">Please sign in to access the dashboard.</p>
-                <div className="max-w-md mx-auto">
-                    <LoginModal onClose={() => {}} /> 
-                </div>
-            </div>
-        </div>
-    );
+    return <Navigate to="/login" replace state={{ from: location }} />;
   }
 
-  // If authenticated, render the child components (Admin Layout/Pages)
+  // If authenticated, render the protected content
   return children;
 };
 

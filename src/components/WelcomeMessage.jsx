@@ -1,3 +1,5 @@
 
-// File deleted by cleanup task. Unused component.
+// <deleted>
+// This file has been removed as part of the codebase cleanup.
+// Component was unused.
 export default () => null;
