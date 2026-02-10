@@ -1,6 +1,7 @@
 
 import React, { useEffect, Suspense } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { Helmet } from 'react-helmet';
 import { Toaster } from '@/components/ui/toaster';
 import { AuthProvider } from '@/contexts/SupabaseAuthContext';
 import { CartProvider } from '@/hooks/useCart';
@@ -25,7 +26,7 @@ import TransferPage from '@/pages/TransferPage';
 import NotFoundPage from '@/pages/NotFoundPage';
 import SitemapHandler from '@/pages/SitemapHandler';
 import CategoryPage from '@/pages/CategoryPage';
-import LoginPage from '@/pages/LoginPage'; // Newly added
+import LoginPage from '@/pages/LoginPage';
 
 // Admin Pages (Lazy Load for Bundle Optimization)
 const AdminLayout = React.lazy(() => import('@/layouts/AdminLayout'));
@@ -81,6 +82,7 @@ const AppInit = () => {
     });
 
     // 2. Global Scroll Restoration Setting
+    // Ensuring this runs at app initialization as requested
     if ('scrollRestoration' in window.history) {
       window.history.scrollRestoration = 'manual';
     }
@@ -100,6 +102,11 @@ function App() {
       <CartProvider>
         <Router>
           <AppInit />
+          {/* Default SEO for the entire app - serves as fallback */}
+          <Helmet>
+            <title>Rare Domains Marketplace - Premium Domains for Sale | RDM</title>
+            <meta name="description" content="Buy and sell premium domain names at Rare Domains Marketplace. Secure the perfect digital asset for your brand today." />
+          </Helmet>
           <ScrollPositionManager>
             <Suspense fallback={<LoadingSpinner />}>
               <Routes>

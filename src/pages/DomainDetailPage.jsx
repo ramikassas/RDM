@@ -1,5 +1,5 @@
 
-import React, { useEffect, useState, useCallback, useRef } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { 
@@ -26,29 +26,24 @@ import { isUnstoppableDomain, getUnstoppableDomainsUrl } from '@/utils/unstoppab
 import { isDomainSold } from '@/utils/isDomainSold';
 
 /*
- * REPORT: INFINITE LOGO LOADING LOOP FIX
+ * REPORT: SEO RACE CONDITION FIX
  * 
- * 1. EXACT ROOT CAUSE:
- *    The `useEffect` hook responsible for calling `fetchRecommended()` had `[domain]` in its dependency array.
- *    Since `domain` is an object reference, any parent re-render or internal state update (like `realtimeStatus` 
- *    or even the `setRecommended` call itself) could potentially cause the `domain` object reference to be unstable 
- *    depending on how `useNoCache` handles updates, or simply create a cycle where:
- *    fetchRecommended -> setRecommended -> Re-render -> Effect runs again (if domain ref changed) -> Loop.
+ * 1. ISSUE:
+ *    Previously, the SEO component was only rendered AFTER the domain data was fetched (inside the !loading block).
+ *    This meant Googlebot would see the default "Loading..." or generic app title during the initial render phase,
+ *    often indexing the wrong title before the Javascript could update it.
  * 
- * 2. WHERE FIXED:
- *    - src/pages/DomainDetailPage.jsx: Modified the `useEffect` dependency for fetching recommendations.
+ * 2. FIX:
+ *    - Extracted `domainName` from URL immediately at the component top level.
+ *    - Moved `<SEO />` component OUTSIDE the loading check.
+ *    - Implemented a "Pre-loading SEO State" using the URL param `domainName` to generate a meaningful title immediately.
+ *    - Title hierarchy:
+ *       1. Loading: `${domainName} - Checking Availability... | RDM`
+ *       2. Loaded: `${domain.name} - Premium Domain | RDM` (or custom SEO title)
  * 
- * 3. HOW IT WORKS NOW:
- *    The effect now depends on `[domain?.id]`. primitives (strings/numbers) are compared by value in React.
- *    This ensures `fetchRecommended` only runs once when the actual domain ID is resolved/changed, 
- *    breaking the potential reference equality loop.
- * 
- * 4. WHAT WAS THE ISSUE:
- *    Infinite fetching of recommended domains, which caused the "Recommended Domains" section to constantly 
- *    re-render, unmounting and remounting `DomainCard` components, triggering endless image loading attempts.
- * 
- * 5. HOW IS IT FIXED:
- *    Changed dependency from `[domain]` to `[domain?.id]`.
+ * 3. BENEFIT:
+ *    Googlebot now immediately sees a relevant title containing the target keyword (the domain name) 
+ *    even while the actual database fetch is still pending.
  */
 
 const SectionCard = ({ title, icon, children, className = "" }) => (
@@ -122,7 +117,7 @@ const DomainDetailPage = () => {
     if (domain?.status) {
         setRealtimeStatus(domain.status);
     }
-  }, [domain]); // This one is fine as it just syncs local state, unlikely to loop unless domain changes
+  }, [domain]); 
 
   // Subscribe to Realtime Updates for this domain
   useEffect(() => {
@@ -159,7 +154,6 @@ const DomainDetailPage = () => {
   }, [domain?.id, toast]);
 
   // FIX: Infinite Loop Prevention
-  // Dependency changed from [domain] to [domain?.id] to prevent reference equality loops
   useEffect(() => {
     if (domain?.id) {
       fetchRecommended();
@@ -193,7 +187,7 @@ const DomainDetailPage = () => {
        timer = setTimeout(trackInterest, TRACKING_DELAY);
     }
     return () => clearInterval(timer);
-  }, [domain]); // This uses domain object but runs once due to session storage check
+  }, [domain]);
 
   useEffect(() => {
     const fetchInterestCount = async () => {
@@ -319,79 +313,81 @@ const DomainDetailPage = () => {
     }
   };
 
-  if (loading) return <div className="min-h-screen bg-slate-50"><DomainDetailSkeleton /></div>;
+  // --- SEO & DATA PREPARATION ---
   
-  if (fetchError || !domain) {
-    return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-slate-50 p-4 text-center">
-        <AlertCircle className="h-12 w-12 text-slate-400 mb-4" />
-        <h1 className="text-2xl font-bold text-slate-900 mb-2">Domain Not Found</h1>
-        <p className="text-slate-600 mb-6">The domain you're looking for isn't listed in our marketplace.</p>
-        <Link to="/marketplace"><Button>Back to Marketplace</Button></Link>
-      </div>
-    );
-  }
+  // 1. Calculate Loading State
+  // We determine loading state based on hook return AND data availability
+  const isDataLoading = loading || (!domain && !fetchError);
 
-  // Calculate sold status based on realtime updates
-  const currentDomainStatus = { ...domain, status: realtimeStatus || domain.status };
-  const isSold = isDomainSold(currentDomainStatus);
+  // 2. Prepare Display Data (Safe Handling)
+  // Even if domain is null, we can render basic SEO from URL param
+  const currentDomainStatus = domain ? { ...domain, status: realtimeStatus || domain.status } : null;
+  const isSold = currentDomainStatus ? isDomainSold(currentDomainStatus) : false;
+  const isUnstoppable = isUnstoppableDomain(domainName); // Can determine this from URL string alone
+  const domainLen = domainName.split('.')[0].length;
 
-  const isUnstoppable = isUnstoppableDomain(domain.name);
-  const domainLen = domain.name.split('.')[0].length;
+  // 3. SEO Data Construction
+  // CRITICAL: We create specific titles for Loading vs Loaded states
+  const displayTitle = isDataLoading 
+      ? `${domainName} - Checking Availability... | RDM`
+      : (domain?.seo?.page_title || `${domainName} - Premium Domain | RDM`);
 
-  const cleanDisplayTitle = domain.name;
-  const seoTitle = domain.seo?.page_title || `Buy ${domain.name} - Premium ${domain.category || 'Digital'} Domain Name`;
-  const socialUrl = `https://rdm.bz/domain/${domain.name}`;
-  const currentUrl = `https://rdm.bz/domain/${domain.name}`;
-  
-  const listedDateDisplay = domain.listed_date ? formatDateOnly(domain.listed_date) : formatDateOnly(domain.created_at);
-  const registrationDateDisplay = domain.registration_date ? formatDateOnly(domain.registration_date) : 'N/A';
+  const displayDescription = isDataLoading
+      ? `Check price and availability for ${domainName}. Premium domain name for sale at Rare Domains Marketplace.`
+      : (domain?.description && domain.description.trim().length > 0 
+          ? domain.description 
+          : generateAutoDescription(domainName));
 
-  const seoDescription = domain.description && domain.description.trim().length > 0
-    ? domain.description
-    : generateAutoDescription(domain.name);
-
-  const seoKeywords = domain.seo?.meta_keywords || [
-    `buy ${domain.name}`,
-    `purchase ${domain.name}`,
-    `${domain.name} price`,
-    `${domain.name} for sale`,
-    "premium domain purchase",
-    "digital asset investment",
-    `${domain.category} domains`
+  const displayKeywords = domain?.seo?.meta_keywords || [
+    `buy ${domainName}`,
+    `purchase ${domainName}`,
+    `${domainName} price`,
+    `${domainName} for sale`,
+    "premium domain purchase"
   ].join(', ');
 
-  const isFullUrl = domain.logo_url && (domain.logo_url.startsWith('http') || domain.logo_url.startsWith('//'));
-  const actualSupabaseUrl = isFullUrl ? domain.logo_url : getSupabaseImageUrl(domain.name, domain.logo_url);
+  // Image handling
+  const socialUrl = `https://rdm.bz/domain/${domainName}`;
+  const currentUrl = `https://rdm.bz/domain/${domainName}`;
   
-  let finalImage = null;
-  if (domain.seo?.og_image_url && domain.seo.og_image_url.trim() !== '') {
-    finalImage = domain.seo.og_image_url;
-  } else if (actualSupabaseUrl) {
-    finalImage = actualSupabaseUrl;
-  } else if (domain.logo_url) {
-    finalImage = domain.logo_url;
+  let finalImage = "https://rdm.bz/og-image.png";
+  if (!isDataLoading && domain) {
+      const isFullUrl = domain.logo_url && (domain.logo_url.startsWith('http') || domain.logo_url.startsWith('//'));
+      const actualSupabaseUrl = isFullUrl ? domain.logo_url : getSupabaseImageUrl(domain.name, domain.logo_url);
+      
+      if (domain.seo?.og_image_url && domain.seo.og_image_url.trim() !== '') {
+        finalImage = domain.seo.og_image_url;
+      } else if (actualSupabaseUrl) {
+        finalImage = actualSupabaseUrl;
+      } else if (domain.logo_url) {
+        finalImage = domain.logo_url;
+      }
   }
 
-  const finalCanonical = domain.seo?.canonical_url || currentUrl;
+  const finalCanonical = domain?.seo?.canonical_url || currentUrl;
 
-  const domainSEOData = {
+  const domainSEOData = domain ? {
       name: domain.name,
-      description: seoDescription,
+      description: displayDescription,
       image: finalImage,
       url: currentUrl,
       price: domain.price,
-      status: realtimeStatus || domain.status, // Use realtime status
+      status: realtimeStatus || domain.status,
       category: domain.category,
       sku: domain.name
-  };
+  } : null;
 
   return (
     <>
+      {/* 
+        CRITICAL SEO FIX: 
+        SEO component is now rendered ALWAYS, even during loading.
+        This ensures Googlebot sees a valid title tag immediately.
+      */}
       <SEO 
-        title={seoTitle}
-        description={seoDescription} 
-        keywords={seoKeywords}
+        title={displayTitle}
+        description={displayDescription} 
+        keywords={displayKeywords}
         type="product"
         image={finalImage}
         url={currentUrl}
@@ -399,319 +395,331 @@ const DomainDetailPage = () => {
         twitterUrl={socialUrl}
         twitterSite="@rami_kassas"
         canonicalUrl={finalCanonical}
-        schema={domain.seo?.schema_data && Object.keys(domain.seo.schema_data).length > 0 ? domain.seo.schema_data : null}
+        schema={domain?.seo?.schema_data && Object.keys(domain.seo.schema_data).length > 0 ? domain.seo.schema_data : null}
         domainData={domainSEOData}
-        ogTitle={domain.seo?.og_title || seoTitle}
+        ogTitle={domain?.seo?.og_title || displayTitle}
       />
       
-      <div className="min-h-screen bg-slate-50 font-sans pb-16">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 md:py-12">
-          
-          <Breadcrumbs items={[{ label: 'Marketplace', path: '/marketplace' }, { label: domain.name, path: null }]} />
-
-          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
+      {isDataLoading ? (
+        <div className="min-h-screen bg-slate-50">
+          <DomainDetailSkeleton />
+        </div>
+      ) : fetchError || !domain ? (
+        <div className="min-h-screen flex flex-col items-center justify-center bg-slate-50 p-4 text-center">
+          <AlertCircle className="h-12 w-12 text-slate-400 mb-4" />
+          <h1 className="text-2xl font-bold text-slate-900 mb-2">Domain Not Found</h1>
+          <p className="text-slate-600 mb-6">The domain you're looking for isn't listed in our marketplace.</p>
+          <Link to="/marketplace"><Button>Back to Marketplace</Button></Link>
+        </div>
+      ) : (
+        <div className="min-h-screen bg-slate-50 font-sans pb-16">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 md:py-12">
             
-            {/* Header Section */}
-            <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 md:p-8 flex flex-col lg:flex-row items-center lg:items-start gap-8 mb-8 relative overflow-hidden">
-               <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-50 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 opacity-50 z-0"></div>
-               
-               <div className="shrink-0 relative z-10 w-full lg:w-auto flex justify-center lg:block">
-                  {domain.logo_url ? (
-                    <DomainLogoDisplay 
-                      logoUrl={domain.logo_url} 
-                      altText={`${domain.name} - Premium Domain Logo`} 
-                      domainName={domain.name} 
-                      className={`mb-0 ${isSold ? 'grayscale opacity-80' : ''}`}
-                      imageClassName="max-h-[160px] max-w-[280px]"
-                      loading="eager" // Main image eager loaded
-                    />
-                  ) : (
-                    <div className="w-[200px] h-[160px] bg-slate-50 rounded-xl flex items-center justify-center border border-slate-100 text-slate-300 font-bold text-xl">
-                      {domain.name.charAt(0).toUpperCase()}
-                    </div>
-                  )}
-               </div>
+            <Breadcrumbs items={[{ label: 'Marketplace', path: '/marketplace' }, { label: domain.name, path: null }]} />
 
-               <div className="flex-1 text-center lg:text-left relative z-10 w-full">
-                  <div className="flex flex-wrap items-center justify-center lg:justify-start gap-3 mb-4">
-                     {domain.featured && !isSold && <PremiumBadge variant="default" />}
-                     <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 ${
-                        isSold ? 'bg-red-50 text-red-700 border border-red-100' :
-                        (realtimeStatus || domain.status) === 'available' ? 'bg-emerald-50 text-emerald-700 border border-emerald-100' :
-                        'bg-amber-50 text-amber-700 border border-amber-100'
-                      }`}>
-                        <span className={`w-2 h-2 rounded-full ${isSold ? 'bg-red-500' : (realtimeStatus || domain.status) === 'available' ? 'bg-emerald-500' : 'bg-amber-500'}`}></span>
-                        {isSold ? 'SOLD' : (realtimeStatus || domain.status)}
-                      </span>
-                      <span className="px-3 py-1 bg-blue-50 text-blue-600 border border-blue-100 rounded-full text-xs font-bold uppercase tracking-wider flex items-center gap-1">
-                        <Tag className="w-3 h-3" /> {domain.category}
-                      </span>
-                  </div>
-
-                  <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-slate-900 mb-6 tracking-tight leading-tight">
-                    {cleanDisplayTitle}
-                  </h1>
-
-                  <p className="text-lg text-slate-500 font-medium max-w-2xl mx-auto lg:mx-0 leading-relaxed">
-                    {domain.tagline || `The perfect digital address for your next big venture in ${domain.category}.`}
-                  </p>
-               </div>
-
-               <div className="hidden lg:flex flex-col items-end shrink-0 relative z-10 min-w-[200px]">
-                  <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Acquisition Price</p>
-                  <div className="text-5xl font-black text-emerald-600 tracking-tight mb-2">${domain.price.toLocaleString()}</div>
-                  <div className="flex items-center gap-1.5 text-xs font-medium text-slate-400 bg-slate-50 px-3 py-1.5 rounded-full border border-slate-100">
-                    <Lock className="w-3 h-3" /> Secure Transaction
-                  </div>
-               </div>
-            </div>
-
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
               
-              <div className="lg:col-span-2 space-y-8">
-                {/* Content... */}
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                   <StatItem label="Length" value={`${domainLen} Chars`} icon={<BarChart3 className="w-5 h-5" />} />
-                   <StatItem label="Extension" value={domain.tld} icon={<Globe className="w-5 h-5" />} />
-                   <StatItem label="Type" value={domain.name.includes('-') ? 'Hyphenated' : 'Clean'} icon={<Check className="w-5 h-5" />} />
-                   <StatItem label="Est. Value" value={isSold ? "Sold" : "Premium"} icon={<TrendingUp className="w-5 h-5" />} />
+              {/* Header Section */}
+              <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 md:p-8 flex flex-col lg:flex-row items-center lg:items-start gap-8 mb-8 relative overflow-hidden">
+                <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-50 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 opacity-50 z-0"></div>
+                
+                <div className="shrink-0 relative z-10 w-full lg:w-auto flex justify-center lg:block">
+                    {domain.logo_url ? (
+                      <DomainLogoDisplay 
+                        logoUrl={domain.logo_url} 
+                        altText={`${domain.name} - Premium Domain Logo`} 
+                        domainName={domain.name} 
+                        className={`mb-0 ${isSold ? 'grayscale opacity-80' : ''}`}
+                        imageClassName="max-h-[160px] max-w-[280px]"
+                        loading="eager" // Main image eager loaded
+                      />
+                    ) : (
+                      <div className="w-[200px] h-[160px] bg-slate-50 rounded-xl flex items-center justify-center border border-slate-100 text-slate-300 font-bold text-xl">
+                        {domain.name.charAt(0).toUpperCase()}
+                      </div>
+                    )}
                 </div>
 
-                <SectionCard title={`Domain Details for ${domain.name}`} icon={<FileText className="w-5 h-5" />}>
-                   <div className="prose prose-slate max-w-none text-slate-600 leading-relaxed">
-                      <p>{seoDescription}</p>
-                      <p>
-                        Securing <em>{domain.name}</em> instantly provides your business with a credible digital footprint. 
-                        Don't miss the opportunity to own this unique digital asset.
-                      </p>
-                   </div>
-                </SectionCard>
-
-                <SectionCard title="Technical Specifications" icon={<Server className="w-5 h-5" />}>
-                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-4 gap-x-8">
-                      <div className="flex justify-between py-2 border-b border-slate-50">
-                        <span className="text-slate-500 text-sm">Registry</span>
-                        <span className="font-medium text-slate-900">{domain.registry || 'N/A'}</span>
-                      </div>
-                      <div className="flex justify-between py-2 border-b border-slate-50">
-                        <span className="text-slate-500 text-sm">Transfer Type</span>
-                        <span className="font-medium text-slate-900">{domain.transfer_type || 'N/A'}</span>
-                      </div>
-                      <div className="flex justify-between py-2 border-b border-slate-50">
-                        <span className="text-slate-500 text-sm">Renewal Price</span>
-                        <span className="font-medium text-slate-900">{domain.renewal_price || 'N/A'}</span>
-                      </div>
-                      <div className="flex justify-between py-2 border-b border-slate-50">
-                        <span className="text-slate-500 text-sm">Listed Date</span>
-                        <span className="font-medium text-slate-900">{listedDateDisplay}</span>
-                      </div>
-                      <div className="flex justify-between py-2 border-b border-slate-50">
-                        <span className="text-slate-500 text-sm">Registration Date</span>
-                        <span className="font-medium text-slate-900">{registrationDateDisplay}</span>
-                      </div>
-                   </div>
-                   {domain.technical_specifications && (
-                     <div className="mt-4 pt-4 border-t border-slate-100 text-sm text-slate-600 leading-relaxed">
-                       <p className="font-medium text-slate-700 mb-1">Additional Specs:</p>
-                       {domain.technical_specifications}
-                     </div>
-                   )}
-                   <div className="mt-6 pt-4 border-t border-slate-100 flex justify-end">
-                      <Button variant="outline" size="sm" onClick={handleWhoisLookup} className="text-xs">
-                         <Globe className="w-3 h-3 mr-2" /> View Detailed WHOIS
-                      </Button>
-                   </div>
-                </SectionCard>
-
-                {domain.use_cases && domain.use_cases.length > 0 && (
-                   <SectionCard title={`Strategic Applications for ${domain.name}`} icon={<Target className="w-5 h-5" />}>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        {domain.use_cases.map((useCase, index) => (
-                          <div key={index} className="flex items-start gap-3 p-3 rounded-lg bg-slate-50 border border-slate-100 hover:border-emerald-200 transition-colors">
-                             <Check className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />
-                             <p className="text-sm text-slate-700 leading-snug">{useCase}</p>
-                          </div>
-                        ))}
-                      </div>
-                   </SectionCard>
-                )}
-
-                {domain.usp_points && domain.usp_points.length > 0 && (
-                  <div className="bg-slate-900 rounded-2xl p-8 text-white relative overflow-hidden shadow-lg">
-                    <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-600/20 rounded-full blur-3xl -mt-10 -mr-10"></div>
-                    <div className="relative z-10">
-                       <h3 className="text-xl font-bold mb-6 flex items-center gap-2"><ShieldCheck className="w-6 h-6 text-emerald-400" /> Why Choose {domain.name}?</h3>
-                       <div className="grid gap-4">
-                          {domain.usp_points.map((point, index) => (
-                             <div key={index} className="flex gap-4">
-                               <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 mt-2.5 shrink-0 box-content ring-4 ring-emerald-400/20" />
-                               <p className="text-slate-200 leading-relaxed">{point}</p>
-                             </div>
-                          ))}
-                       </div>
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {/* Right Column: Actions */}
-              <div className="space-y-6">
-                 
-                 <div className="lg:hidden bg-white rounded-xl shadow-sm border border-slate-200 p-6 text-center">
-                    <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Acquisition Price</p>
-                    <div className="text-4xl font-black text-emerald-600 mb-2">${domain.price.toLocaleString()}</div>
-                 </div>
-
-                 <div className="bg-white rounded-2xl shadow-lg shadow-emerald-900/5 border border-emerald-100 p-6 sticky top-24">
-                    <h3 className="text-lg font-bold text-slate-900 mb-6 flex items-center gap-2">
-                       <CreditCard className="w-5 h-5 text-emerald-600" /> Purchase Options
-                    </h3>
-                    
-                    <div className="space-y-4">
-                       {isSold ? (
-                          <div className="text-center p-4 bg-red-50 rounded-lg border border-red-100">
-                             <Lock className="w-10 h-10 text-red-500 mx-auto mb-2" />
-                             <h4 className="font-bold text-red-700">Domain Sold</h4>
-                             <p className="text-sm text-red-600">This domain is no longer available.</p>
-                          </div>
-                       ) : isUnstoppable ? (
-                          <a href={getUnstoppableDomainsUrl(domain.name)} target="_blank" rel="noopener noreferrer">
-                            <Button size="lg" className="w-full h-14 text-base font-bold bg-blue-600 hover:bg-blue-700">
-                               <Globe className="w-5 h-5 mr-2" /> Buy via Unstoppable Domains
-                            </Button>
-                          </a>
-                       ) : (
-                          <>
-                             <Button size="lg" onClick={handleBuyNow} disabled={domain.status !== 'available'} className="w-full h-14 text-base font-bold bg-emerald-600 hover:bg-emerald-700 shadow-md shadow-emerald-200">
-                                <ShoppingCart className="w-5 h-5 mr-2" /> Buy Now
-                             </Button>
-                             
-                             <div className="grid grid-cols-2 gap-3">
-                                <Button variant="outline" onClick={handleMakeOffer} disabled={domain.status !== 'available'} className="h-12 font-semibold">
-                                   <Send className="w-4 h-4 mr-2" /> Offer
-                                </Button>
-                                <Button variant="outline" onClick={handleWhatsAppContact} className="h-12 font-semibold text-green-700 bg-green-50 border-green-200 hover:bg-green-100">
-                                   <MessageCircle className="w-4 h-4 mr-2" /> Chat
-                                </Button>
-                             </div>
-                             
-                             <Button 
-                                variant="secondary" 
-                                onClick={handleGoDaddyBuy} 
-                                className="w-full bg-[#FFD700] hover:bg-[#E6C200] text-slate-900 font-bold border border-yellow-400/50"
-                             >
-                                Buy via GoDaddy <ExternalLink className="w-4 h-4 ml-2 opacity-70" />
-                             </Button>
-                          </>
-                       )}
+                <div className="flex-1 text-center lg:text-left relative z-10 w-full">
+                    <div className="flex flex-wrap items-center justify-center lg:justify-start gap-3 mb-4">
+                      {domain.featured && !isSold && <PremiumBadge variant="default" />}
+                      <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 ${
+                          isSold ? 'bg-red-50 text-red-700 border border-red-100' :
+                          (realtimeStatus || domain.status) === 'available' ? 'bg-emerald-50 text-emerald-700 border border-emerald-100' :
+                          'bg-amber-50 text-amber-700 border border-amber-100'
+                        }`}>
+                          <span className={`w-2 h-2 rounded-full ${isSold ? 'bg-red-500' : (realtimeStatus || domain.status) === 'available' ? 'bg-emerald-500' : 'bg-amber-500'}`}></span>
+                          {isSold ? 'SOLD' : (realtimeStatus || domain.status)}
+                        </span>
+                        <span className="px-3 py-1 bg-blue-50 text-blue-600 border border-blue-100 rounded-full text-xs font-bold uppercase tracking-wider flex items-center gap-1">
+                          <Tag className="w-3 h-3" /> {domain.category}
+                        </span>
                     </div>
 
-                    {timeLeft && timeLeft !== "EXPIRED" && !isSold && (
-                       <div className="mt-6 pt-6 border-t border-slate-100">
-                          <div className="flex items-center justify-between text-slate-500 mb-2">
-                             <span className="text-xs font-bold uppercase tracking-wider flex items-center gap-1"><Clock className="w-3 h-3" /> Offer Expires In</span>
-                          </div>
-                          <div className="grid grid-cols-4 gap-1 text-center bg-slate-50 rounded-lg p-2 border border-slate-100">
-                             <div><span className="block font-black text-slate-800">{timeLeft.days}</span><span className="text-[10px] uppercase">Days</span></div>
-                             <div><span className="block font-black text-slate-800">{timeLeft.hours}</span><span className="text-[10px] uppercase">Hrs</span></div>
-                             <div><span className="block font-black text-slate-800">{timeLeft.minutes}</span><span className="text-[10px] uppercase">Min</span></div>
-                             <div><span className="block font-black text-slate-800">{timeLeft.seconds}</span><span className="text-[10px] uppercase">Sec</span></div>
-                          </div>
-                       </div>
-                    )}
-                 </div>
+                    <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-slate-900 mb-6 tracking-tight leading-tight">
+                      {domain.name}
+                    </h1>
 
-                 {interestCount > 0 && (
-                    <div className="bg-orange-50 rounded-xl border border-orange-100 p-5 shadow-sm">
-                       <div className="flex items-center gap-3 mb-3">
-                          <div className="p-2 bg-white rounded-full text-orange-500 shadow-sm"><Flame className="w-5 h-5 fill-orange-500" /></div>
-                          <h3 className="font-bold text-orange-900">High Demand</h3>
-                       </div>
-                       <p className="text-sm text-orange-800 leading-relaxed">
-                          This domain has been viewed by <span className="font-bold">{interestCount} potential buyers</span> in the last 30 days. Action recommended.
-                       </p>
-                    </div>
-                 )}
-                 
-                 <div className="bg-white rounded-xl border border-slate-200 p-6 space-y-4">
-                    <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider mb-2">Buyer Protection</h3>
-                    <div className="flex items-center gap-3 text-sm text-slate-600">
-                       <ShieldCheck className="w-5 h-5 text-emerald-600 shrink-0" />
-                       <span>Domain ownership transfer guarantee</span>
-                    </div>
-                    <div className="flex items-center gap-3 text-sm text-slate-600">
-                       <Lock className="w-5 h-5 text-emerald-600 shrink-0" />
-                       <span>Secure escrow payment processing</span>
-                    </div>
-                    <div className="pt-4 border-t border-slate-100">
-                       <Link to="/contact" className="text-sm text-slate-500 hover:text-emerald-600 flex items-center gap-1 font-medium transition-colors">
-                          <Info className="w-4 h-4" /> Questions? Contact Broker
-                       </Link>
-                    </div>
-                 </div>
-              </div>
-            </div>
-
-            <div className="mt-16 pt-10 border-t border-slate-200">
-               <h2 className="text-xl font-bold text-slate-900 mb-6">Explore More</h2>
-               <div className="flex flex-wrap gap-4">
-                  {domain.tld === '.com' && (
-                    <Link to="/premium-com-domains" className="group flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 text-slate-600 rounded-lg hover:bg-emerald-50 hover:text-emerald-700 hover:border-emerald-200 transition-all shadow-sm">
-                      Browse .COM domains <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-                    </Link>
-                  )}
-                  <Link to="/premium-domain-pricing" className="group flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 text-slate-600 rounded-lg hover:bg-emerald-50 hover:text-emerald-700 hover:border-emerald-200 transition-all shadow-sm">
-                     View pricing guide <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-                  </Link>
-                  <Link to="/premium-domains-for-sale" className="group flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 text-slate-600 rounded-lg hover:bg-emerald-50 hover:text-emerald-700 hover:border-emerald-200 transition-all shadow-sm">
-                     All premium domains <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-                  </Link>
-               </div>
-            </div>
-
-            <div className="mt-12 pt-10 border-t border-slate-200">
-              <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4 mb-8">
-                 <div>
-                    <h2 className="text-2xl font-bold text-slate-900 mb-2 flex items-center gap-2">
-                       <Sparkles className="w-6 h-6 text-emerald-600" /> Recommended Domains
-                    </h2>
-                    <p className="text-slate-500 max-w-2xl">
-                       Hand-picked premium domains that might interest you.
+                    <p className="text-lg text-slate-500 font-medium max-w-2xl mx-auto lg:mx-0 leading-relaxed">
+                      {domain.tagline || `The perfect digital address for your next big venture in ${domain.category}.`}
                     </p>
-                 </div>
-              </div>
-              
-              {recLoading ? (
-                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {[1, 2, 3].map((i) => (
-                       <div key={i} className="bg-slate-50 h-[280px] rounded-xl animate-pulse"></div>
-                    ))}
-                 </div>
-              ) : recError ? (
-                 <div className="bg-slate-50 border border-slate-100 rounded-xl p-8 text-center">
-                    <AlertCircle className="w-8 h-8 mx-auto text-slate-300 mb-2" />
-                    <p className="text-slate-500 mb-4">Failed to load recommendations.</p>
-                    <Button variant="outline" size="sm" onClick={fetchRecommended} className="gap-2">
-                       <RefreshCcw className="w-4 h-4" /> Retry
-                    </Button>
-                 </div>
-              ) : recommended.length > 0 ? (
-                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {recommended.map((item, index) => (
-                       <DomainCard key={item.id} domain={item} priority={false} />
-                    ))}
-                 </div>
-              ) : (
-                 <p className="text-slate-500 italic">No additional recommendations at this time.</p>
-              )}
-            </div>
+                </div>
 
-          </motion.div>
-          
-          {showOfferForm && <MakeOfferForm domain={{...domain, status: realtimeStatus || domain.status}} onClose={() => setShowOfferForm(false)} />}
-          <WhoisModal isOpen={isWhoisModalOpen} onClose={() => setIsWhoisModalOpen(false)} data={whoisData} loading={whoisLoading} error={whoisError} domain={domain.name} />
+                <div className="hidden lg:flex flex-col items-end shrink-0 relative z-10 min-w-[200px]">
+                    <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Acquisition Price</p>
+                    <div className="text-5xl font-black text-emerald-600 tracking-tight mb-2">${domain.price.toLocaleString()}</div>
+                    <div className="flex items-center gap-1.5 text-xs font-medium text-slate-400 bg-slate-50 px-3 py-1.5 rounded-full border border-slate-100">
+                      <Lock className="w-3 h-3" /> Secure Transaction
+                    </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                
+                <div className="lg:col-span-2 space-y-8">
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <StatItem label="Length" value={`${domainLen} Chars`} icon={<BarChart3 className="w-5 h-5" />} />
+                    <StatItem label="Extension" value={domain.tld} icon={<Globe className="w-5 h-5" />} />
+                    <StatItem label="Type" value={domain.name.includes('-') ? 'Hyphenated' : 'Clean'} icon={<Check className="w-5 h-5" />} />
+                    <StatItem label="Est. Value" value={isSold ? "Sold" : "Premium"} icon={<TrendingUp className="w-5 h-5" />} />
+                  </div>
+
+                  <SectionCard title={`Domain Details for ${domain.name}`} icon={<FileText className="w-5 h-5" />}>
+                    <div className="prose prose-slate max-w-none text-slate-600 leading-relaxed">
+                        <p>{displayDescription}</p>
+                        <p>
+                          Securing <em>{domain.name}</em> instantly provides your business with a credible digital footprint. 
+                          Don't miss the opportunity to own this unique digital asset.
+                        </p>
+                    </div>
+                  </SectionCard>
+
+                  <SectionCard title="Technical Specifications" icon={<Server className="w-5 h-5" />}>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-4 gap-x-8">
+                        <div className="flex justify-between py-2 border-b border-slate-50">
+                          <span className="text-slate-500 text-sm">Registry</span>
+                          <span className="font-medium text-slate-900">{domain.registry || 'N/A'}</span>
+                        </div>
+                        <div className="flex justify-between py-2 border-b border-slate-50">
+                          <span className="text-slate-500 text-sm">Transfer Type</span>
+                          <span className="font-medium text-slate-900">{domain.transfer_type || 'N/A'}</span>
+                        </div>
+                        <div className="flex justify-between py-2 border-b border-slate-50">
+                          <span className="text-slate-500 text-sm">Renewal Price</span>
+                          <span className="font-medium text-slate-900">{domain.renewal_price || 'N/A'}</span>
+                        </div>
+                        <div className="flex justify-between py-2 border-b border-slate-50">
+                          <span className="text-slate-500 text-sm">Listed Date</span>
+                          <span className="font-medium text-slate-900">{domain.listed_date ? formatDateOnly(domain.listed_date) : formatDateOnly(domain.created_at)}</span>
+                        </div>
+                        <div className="flex justify-between py-2 border-b border-slate-50">
+                          <span className="text-slate-500 text-sm">Registration Date</span>
+                          <span className="font-medium text-slate-900">{domain.registration_date ? formatDateOnly(domain.registration_date) : 'N/A'}</span>
+                        </div>
+                    </div>
+                    {domain.technical_specifications && (
+                      <div className="mt-4 pt-4 border-t border-slate-100 text-sm text-slate-600 leading-relaxed">
+                        <p className="font-medium text-slate-700 mb-1">Additional Specs:</p>
+                        {domain.technical_specifications}
+                      </div>
+                    )}
+                    <div className="mt-6 pt-4 border-t border-slate-100 flex justify-end">
+                        <Button variant="outline" size="sm" onClick={handleWhoisLookup} className="text-xs">
+                          <Globe className="w-3 h-3 mr-2" /> View Detailed WHOIS
+                        </Button>
+                    </div>
+                  </SectionCard>
+
+                  {domain.use_cases && domain.use_cases.length > 0 && (
+                    <SectionCard title={`Strategic Applications for ${domain.name}`} icon={<Target className="w-5 h-5" />}>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                          {domain.use_cases.map((useCase, index) => (
+                            <div key={index} className="flex items-start gap-3 p-3 rounded-lg bg-slate-50 border border-slate-100 hover:border-emerald-200 transition-colors">
+                              <Check className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />
+                              <p className="text-sm text-slate-700 leading-snug">{useCase}</p>
+                            </div>
+                          ))}
+                        </div>
+                    </SectionCard>
+                  )}
+
+                  {domain.usp_points && domain.usp_points.length > 0 && (
+                    <div className="bg-slate-900 rounded-2xl p-8 text-white relative overflow-hidden shadow-lg">
+                      <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-600/20 rounded-full blur-3xl -mt-10 -mr-10"></div>
+                      <div className="relative z-10">
+                        <h3 className="text-xl font-bold mb-6 flex items-center gap-2"><ShieldCheck className="w-6 h-6 text-emerald-400" /> Why Choose {domain.name}?</h3>
+                        <div className="grid gap-4">
+                            {domain.usp_points.map((point, index) => (
+                              <div key={index} className="flex gap-4">
+                                <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 mt-2.5 shrink-0 box-content ring-4 ring-emerald-400/20" />
+                                <p className="text-slate-200 leading-relaxed">{point}</p>
+                              </div>
+                            ))}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Right Column: Actions */}
+                <div className="space-y-6">
+                  
+                  <div className="lg:hidden bg-white rounded-xl shadow-sm border border-slate-200 p-6 text-center">
+                      <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Acquisition Price</p>
+                      <div className="text-4xl font-black text-emerald-600 mb-2">${domain.price.toLocaleString()}</div>
+                  </div>
+
+                  <div className="bg-white rounded-2xl shadow-lg shadow-emerald-900/5 border border-emerald-100 p-6 sticky top-24">
+                      <h3 className="text-lg font-bold text-slate-900 mb-6 flex items-center gap-2">
+                        <CreditCard className="w-5 h-5 text-emerald-600" /> Purchase Options
+                      </h3>
+                      
+                      <div className="space-y-4">
+                        {isSold ? (
+                            <div className="text-center p-4 bg-red-50 rounded-lg border border-red-100">
+                              <Lock className="w-10 h-10 text-red-500 mx-auto mb-2" />
+                              <h4 className="font-bold text-red-700">Domain Sold</h4>
+                              <p className="text-sm text-red-600">This domain is no longer available.</p>
+                            </div>
+                        ) : isUnstoppable ? (
+                            <a href={getUnstoppableDomainsUrl(domain.name)} target="_blank" rel="noopener noreferrer">
+                              <Button size="lg" className="w-full h-14 text-base font-bold bg-blue-600 hover:bg-blue-700">
+                                <Globe className="w-5 h-5 mr-2" /> Buy via Unstoppable Domains
+                              </Button>
+                            </a>
+                        ) : (
+                            <>
+                              <Button size="lg" onClick={handleBuyNow} disabled={domain.status !== 'available'} className="w-full h-14 text-base font-bold bg-emerald-600 hover:bg-emerald-700 shadow-md shadow-emerald-200">
+                                  <ShoppingCart className="w-5 h-5 mr-2" /> Buy Now
+                              </Button>
+                              
+                              <div className="grid grid-cols-2 gap-3">
+                                  <Button variant="outline" onClick={handleMakeOffer} disabled={domain.status !== 'available'} className="h-12 font-semibold">
+                                    <Send className="w-4 h-4 mr-2" /> Offer
+                                  </Button>
+                                  <Button variant="outline" onClick={handleWhatsAppContact} className="h-12 font-semibold text-green-700 bg-green-50 border-green-200 hover:bg-green-100">
+                                    <MessageCircle className="w-4 h-4 mr-2" /> Chat
+                                  </Button>
+                              </div>
+                              
+                              <Button 
+                                  variant="secondary" 
+                                  onClick={handleGoDaddyBuy} 
+                                  className="w-full bg-[#FFD700] hover:bg-[#E6C200] text-slate-900 font-bold border border-yellow-400/50"
+                              >
+                                  Buy via GoDaddy <ExternalLink className="w-4 h-4 ml-2 opacity-70" />
+                              </Button>
+                            </>
+                        )}
+                      </div>
+
+                      {timeLeft && timeLeft !== "EXPIRED" && !isSold && (
+                        <div className="mt-6 pt-6 border-t border-slate-100">
+                            <div className="flex items-center justify-between text-slate-500 mb-2">
+                              <span className="text-xs font-bold uppercase tracking-wider flex items-center gap-1"><Clock className="w-3 h-3" /> Offer Expires In</span>
+                            </div>
+                            <div className="grid grid-cols-4 gap-1 text-center bg-slate-50 rounded-lg p-2 border border-slate-100">
+                              <div><span className="block font-black text-slate-800">{timeLeft.days}</span><span className="text-[10px] uppercase">Days</span></div>
+                              <div><span className="block font-black text-slate-800">{timeLeft.hours}</span><span className="text-[10px] uppercase">Hrs</span></div>
+                              <div><span className="block font-black text-slate-800">{timeLeft.minutes}</span><span className="text-[10px] uppercase">Min</span></div>
+                              <div><span className="block font-black text-slate-800">{timeLeft.seconds}</span><span className="text-[10px] uppercase">Sec</span></div>
+                            </div>
+                        </div>
+                      )}
+                  </div>
+
+                  {interestCount > 0 && (
+                      <div className="bg-orange-50 rounded-xl border border-orange-100 p-5 shadow-sm">
+                        <div className="flex items-center gap-3 mb-3">
+                            <div className="p-2 bg-white rounded-full text-orange-500 shadow-sm"><Flame className="w-5 h-5 fill-orange-500" /></div>
+                            <h3 className="font-bold text-orange-900">High Demand</h3>
+                        </div>
+                        <p className="text-sm text-orange-800 leading-relaxed">
+                            This domain has been viewed by <span className="font-bold">{interestCount} potential buyers</span> in the last 30 days. Action recommended.
+                        </p>
+                      </div>
+                  )}
+                  
+                  <div className="bg-white rounded-xl border border-slate-200 p-6 space-y-4">
+                      <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider mb-2">Buyer Protection</h3>
+                      <div className="flex items-center gap-3 text-sm text-slate-600">
+                        <ShieldCheck className="w-5 h-5 text-emerald-600 shrink-0" />
+                        <span>Domain ownership transfer guarantee</span>
+                      </div>
+                      <div className="flex items-center gap-3 text-sm text-slate-600">
+                        <Lock className="w-5 h-5 text-emerald-600 shrink-0" />
+                        <span>Secure escrow payment processing</span>
+                      </div>
+                      <div className="pt-4 border-t border-slate-100">
+                        <Link to="/contact" className="text-sm text-slate-500 hover:text-emerald-600 flex items-center gap-1 font-medium transition-colors">
+                            <Info className="w-4 h-4" /> Questions? Contact Broker
+                        </Link>
+                      </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-16 pt-10 border-t border-slate-200">
+                <h2 className="text-xl font-bold text-slate-900 mb-6">Explore More</h2>
+                <div className="flex flex-wrap gap-4">
+                    {domain.tld === '.com' && (
+                      <Link to="/premium-com-domains" className="group flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 text-slate-600 rounded-lg hover:bg-emerald-50 hover:text-emerald-700 hover:border-emerald-200 transition-all shadow-sm">
+                        Browse .COM domains <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                      </Link>
+                    )}
+                    <Link to="/premium-domain-pricing" className="group flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 text-slate-600 rounded-lg hover:bg-emerald-50 hover:text-emerald-700 hover:border-emerald-200 transition-all shadow-sm">
+                      View pricing guide <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                    </Link>
+                    <Link to="/premium-domains-for-sale" className="group flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 text-slate-600 rounded-lg hover:bg-emerald-50 hover:text-emerald-700 hover:border-emerald-200 transition-all shadow-sm">
+                      All premium domains <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                    </Link>
+                </div>
+              </div>
+
+              <div className="mt-12 pt-10 border-t border-slate-200">
+                <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4 mb-8">
+                  <div>
+                      <h2 className="text-2xl font-bold text-slate-900 mb-2 flex items-center gap-2">
+                        <Sparkles className="w-6 h-6 text-emerald-600" /> Recommended Domains
+                      </h2>
+                      <p className="text-slate-500 max-w-2xl">
+                        Hand-picked premium domains that might interest you.
+                      </p>
+                  </div>
+                </div>
+                
+                {recLoading ? (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                      {[1, 2, 3].map((i) => (
+                        <div key={i} className="bg-slate-50 h-[280px] rounded-xl animate-pulse"></div>
+                      ))}
+                  </div>
+                ) : recError ? (
+                  <div className="bg-slate-50 border border-slate-100 rounded-xl p-8 text-center">
+                      <AlertCircle className="w-8 h-8 mx-auto text-slate-300 mb-2" />
+                      <p className="text-slate-500 mb-4">Failed to load recommendations.</p>
+                      <Button variant="outline" size="sm" onClick={fetchRecommended} className="gap-2">
+                        <RefreshCcw className="w-4 h-4" /> Retry
+                      </Button>
+                  </div>
+                ) : recommended.length > 0 ? (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                      {recommended.map((item, index) => (
+                        <DomainCard key={item.id} domain={item} priority={false} />
+                      ))}
+                  </div>
+                ) : (
+                  <p className="text-slate-500 italic">No additional recommendations at this time.</p>
+                )}
+              </div>
+
+            </motion.div>
+            
+            {showOfferForm && <MakeOfferForm domain={{...domain, status: realtimeStatus || domain.status}} onClose={() => setShowOfferForm(false)} />}
+            <WhoisModal isOpen={isWhoisModalOpen} onClose={() => setIsWhoisModalOpen(false)} data={whoisData} loading={whoisLoading} error={whoisError} domain={domain.name} />
+          </div>
         </div>
-      </div>
+      )}
     </>
   );
 };
