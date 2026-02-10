@@ -42,17 +42,22 @@ const AdminLayout = () => {
   ];
 
   const handleLogout = async () => {
-    // Navigate immediately to home to prevent ProtectedRoute from showing LoginModal
-    navigate('/', { replace: true });
-    
     try {
+      // 1. Perform the logout
       await signOut();
+      
+      // 2. Notify user
       toast({
         title: "Signed Out",
         description: "You have been successfully logged out."
       });
+
+      // 3. Force redirect to login page
+      navigate('/login', { replace: true });
     } catch (error) {
       console.error("Logout error:", error);
+      // Even if error, force navigation
+      navigate('/login', { replace: true });
     }
   };
 

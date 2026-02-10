@@ -25,6 +25,7 @@ import TransferPage from '@/pages/TransferPage';
 import NotFoundPage from '@/pages/NotFoundPage';
 import SitemapHandler from '@/pages/SitemapHandler';
 import CategoryPage from '@/pages/CategoryPage';
+import LoginPage from '@/pages/LoginPage'; // Newly added
 
 // Admin Pages (Lazy Load for Bundle Optimization)
 const AdminLayout = React.lazy(() => import('@/layouts/AdminLayout'));
@@ -59,10 +60,10 @@ const PublicLayout = ({ children }) => (
   </div>
 );
 
-// Component to inject anti-caching meta tags
-const CacheBuster = () => {
+// Component to inject anti-caching meta tags and ensure scroll restoration is manual
+const AppInit = () => {
   useEffect(() => {
-    // Add meta tags to head to prevent browser caching of the HTML
+    // 1. Anti-caching headers
     const metas = [
       { name: 'Cache-Control', content: 'no-cache, no-store, must-revalidate' },
       { name: 'Pragma', content: 'no-cache' },
@@ -70,7 +71,6 @@ const CacheBuster = () => {
     ];
 
     metas.forEach(metaDef => {
-      // Check if exists, update or create
       let meta = document.querySelector(`meta[http-equiv="${metaDef.name}"]`);
       if (!meta) {
         meta = document.createElement('meta');
@@ -79,6 +79,11 @@ const CacheBuster = () => {
       }
       meta.content = metaDef.content;
     });
+
+    // 2. Global Scroll Restoration Setting
+    if ('scrollRestoration' in window.history) {
+      window.history.scrollRestoration = 'manual';
+    }
   }, []);
   return null;
 };
@@ -94,11 +99,14 @@ function App() {
     <AuthProvider>
       <CartProvider>
         <Router>
-          <CacheBuster />
+          <AppInit />
           <ScrollPositionManager>
             <Suspense fallback={<LoadingSpinner />}>
               <Routes>
                 <Route path="/sitemap.xml" element={<SitemapHandler />} />
+
+                {/* Login Route - Dedicated Page */}
+                <Route path="/login" element={<LoginPage />} />
 
                 <Route path="/" element={<PublicLayout><HomePage /></PublicLayout>} />
                 <Route path="/marketplace" element={<PublicLayout><MarketplacePage /></PublicLayout>} />

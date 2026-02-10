@@ -1,3 +1,5 @@
 
-// File deleted by cleanup task. Replaced by AdminOffers.jsx.
+// <deleted>
+// This file has been removed as part of the codebase cleanup.
+// Replaced by src/pages/admin/AdminOffers.jsx
 export default () => null;
