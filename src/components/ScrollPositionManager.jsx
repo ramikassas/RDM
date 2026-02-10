@@ -4,116 +4,98 @@ import { useLocation, useNavigationType } from 'react-router-dom';
 
 const ScrollPositionManager = ({ children }) => {
   const location = useLocation();
-  const navType = useNavigationType(); // "POP", "PUSH", "REPLACE"
-  
-  // Refs to track state without re-renders
+  const navType = useNavigationType();
   const scrollPosRef = useRef(0);
-  const prevPathRef = useRef(location.pathname);
-  const isRestoringRef = useRef(false);
-  
-  // Detect mobile to apply specific timing fixes if needed
-  const isMobile = useRef(
-    typeof navigator !== 'undefined' && 
-    /iPhone|iPad|iPod|Android/i.test(navigator.userAgent)
-  );
+  const lastPath = useRef(location.pathname);
+  const isFirstRender = useRef(true);
 
-  // 1. CRITICAL: Disable browser's native scroll restoration immediately
-  useLayoutEffect(() => {
-    if ('scrollRestoration' in window.history) {
-      window.history.scrollRestoration = 'manual';
-    }
-  }, []);
-
-  // 2. Debounced Scroll Listener
-  // Uses requestAnimationFrame for optimal performance on mobile
+  // 1. Handle Scroll Tracking
+  // Track scroll position continuously to have the latest value when navigation occurs
+  // We use a passive listener to avoid performance bottlenecks
   useEffect(() => {
-    let ticking = false;
-    
     const handleScroll = () => {
-      if (!ticking) {
-        window.requestAnimationFrame(() => {
-          // Only save position if we are NOT currently in the middle of a restoration logic
-          // This prevents overwriting saved 'good' positions with '0' during page transitions
-          if (!isRestoringRef.current) {
-            scrollPosRef.current = window.scrollY;
-          }
-          ticking = false;
-        });
-        ticking = true;
-      }
+      scrollPosRef.current = window.scrollY;
     };
-
-    // Passive listener for better scroll performance on touch devices
+    
     window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  // 3. Handle Navigation: Save & Restore
+  // 2. Main Scroll Logic (Restoration & Reset)
   useLayoutEffect(() => {
-    const currentPath = location.pathname;
-    const prevPath = prevPathRef.current;
-
-    // --- SAVE LOGIC ---
-    // If path has changed, save the LAST KNOWN scroll position for the PREVIOUS path
-    if (prevPath !== currentPath) {
-      try {
-        const saveKey = `scroll_pos_${prevPath}`;
-        // Use the ref value which tracks the last stable scroll position
-        const posToSave = scrollPosRef.current;
-        sessionStorage.setItem(saveKey, posToSave.toString());
-        
-        console.log(`[Scroll] Saved position ${posToSave} for ${prevPath}`);
-      } catch (e) {
-        // Fallback for private browsing or quota exceeded
-        console.warn('[Scroll] Failed to save scroll position to sessionStorage', e);
-      }
-      
-      // Update ref for next cycle
-      prevPathRef.current = currentPath;
+    // CRITICAL: Disable browser's native scroll restoration immediately
+    // This allows us to take full manual control
+    if ('scrollRestoration' in window.history) {
+      window.history.scrollRestoration = 'manual';
     }
 
-    // --- RESTORE LOGIC ---
-    if (navType === 'POP') {
-      isRestoringRef.current = true;
-      const restoreKey = `scroll_pos_${currentPath}`;
-      
-      try {
-        const savedPos = sessionStorage.getItem(restoreKey);
-        
-        if (savedPos !== null) {
-          const y = parseInt(savedPos, 10);
-          console.log(`[Scroll] Restoring to ${y} for ${currentPath} (POP)`);
-          
-          // Attempt 1: Immediate (Synchronous before paint)
-          window.scrollTo(0, y);
-          
-          // Attempt 2: Small delay for mobile/async rendering issues
-          // This fixes the "scroll to bottom" or "clamped to top" issues if DOM wasn't fully ready
-          if (isMobile.current) {
-             setTimeout(() => {
-                window.scrollTo(0, y);
-                isRestoringRef.current = false;
-             }, 50); // 50ms is usually imperceptible but allows layout to settle
-          } else {
-             isRestoringRef.current = false;
-          }
+    const currentPath = location.pathname;
+    
+    // Check if this is a page reload
+    // performance.navigation.type === 1 is deprecated but widely supported
+    // performance.getEntriesByType("navigation")[0].type === 'reload' is the modern standard
+    const navEntry = performance.getEntriesByType?.("navigation")?.[0];
+    const isReload = (navEntry && navEntry.type === 'reload') || performance.navigation?.type === 1;
 
-        } else {
-          console.log(`[Scroll] No saved position found for ${currentPath}`);
-          isRestoringRef.current = false;
-        }
-      } catch (e) {
-        console.error('[Scroll] Restore failed', e);
-        isRestoringRef.current = false;
+    // --- HANDLING INITIAL LOAD / REFRESH ---
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
+      
+      if (isReload) {
+        // Requirement: On refresh, ALWAYS scroll to top immediately
+        // This MUST be synchronous to prevent visual jumping
+        window.scrollTo(0, 0);
+        
+        // Reset stored position for this page to prevent stale restoration later
+        try {
+          sessionStorage.removeItem(`scroll_pos_${currentPath}`);
+        } catch (e) { /* ignore */ }
+        
+        // Return early - we don't want to run navigation logic on a fresh reload
+        return;
+      }
+      
+      // If not a reload (e.g. fresh tab), continue to standard logic
+    }
+
+    // --- SAVE PREVIOUS POSITION ---
+    // Save the scroll position of the PREVIOUS page before we handle the new one
+    // Only save if the path has actually changed to avoid overwriting with 0 on re-renders
+    if (lastPath.current !== currentPath) {
+       const saveKey = `scroll_pos_${lastPath.current}`;
+       const posToSave = scrollPosRef.current;
+       try {
+         sessionStorage.setItem(saveKey, posToSave.toString());
+       } catch (e) {
+         console.warn('Failed to save scroll position', e);
+       }
+    }
+
+    // --- RESTORE OR RESET ---
+    if (navType === 'POP') {
+      // Back/Forward button pressed - try to restore
+      const restoreKey = `scroll_pos_${currentPath}`;
+      const savedPos = sessionStorage.getItem(restoreKey);
+      
+      if (savedPos !== null) {
+        const y = parseInt(savedPos, 10);
+        window.scrollTo(0, y);
+      } else {
+        // No saved position found, default to top
+        window.scrollTo(0, 0);
       }
     } else {
-      // PUSH / REPLACE -> Scroll to top
-      console.log(`[Scroll] Resetting to top for ${currentPath} (${navType})`);
+      // PUSH (New Link) or REPLACE - always scroll to top
       window.scrollTo(0, 0);
-      
-      // Reset internal ref so we start tracking from 0
-      scrollPosRef.current = 0;
     }
+    
+    // Update ref for next navigation
+    lastPath.current = currentPath;
+    
+    // Reset internal scroll tracker to 0 (or restored value) for the new page
+    // ensuring we don't carry over old scroll values if the listener hasn't fired yet
+    scrollPosRef.current = window.scrollY;
+
   }, [location.pathname, navType]);
 
   return children;
