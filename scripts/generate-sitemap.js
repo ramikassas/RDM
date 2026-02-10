@@ -1,4 +1,3 @@
-
 /* eslint-env node */
 
 import fs from 'fs';
@@ -76,6 +75,51 @@ const supabase = createClient(config.url, config.key, {
 
 const BASE_URL = 'https://rdm.bz';
 
+/**
+ * Cleans and reconstructs Supabase Storage image URLs to prevent duplication.
+ * This handles cases where the DB entry is just a filename OR a full URL.
+ * 
+ * @param {string} rawUrl - The value from the database (filename or URL)
+ * @param {string} domainName - The domain name (folder name in storage)
+ * @param {string} supabaseUrl - The project Supabase URL
+ * @returns {string|null} - The cleaned canonical URL or null if invalid
+ */
+const cleanImageUrl = (rawUrl, domainName, supabaseUrl) => {
+  if (!rawUrl || !domainName) return null;
+
+  try {
+    // 1. Extract the pure filename
+    // valid inputs: "logo.png", "https://.../logo.png", "folder/logo.png"
+    // invalid inputs to fix: "https://.../domain.com/https://.../logo.png"
+    
+    // Split by slash and take the last segment
+    let filename = rawUrl.split('/').pop();
+    
+    // Remove any query parameters if present
+    filename = filename.split('?')[0].trim();
+
+    // 2. Validation
+    if (!filename || filename.length === 0) return null;
+    
+    // Basic extension check to ensure it looks like an image
+    const validExtensions = ['.jpg', '.jpeg', '.png', '.webp', '.svg', '.gif'];
+    const hasValidExt = validExtensions.some(ext => filename.toLowerCase().endsWith(ext));
+    
+    // Note: We don't strictly enforce extension check to allow for flexible storage, 
+    // but we do check that it's not "undefined" or empty.
+    if (filename === 'undefined' || filename === 'null') return null;
+
+    // 3. Reconstruct the canonical URL
+    // Structure: {SUPABASE_URL}/storage/v1/object/public/domain-logos/{DOMAIN_NAME}/{FILENAME}
+    const cleanUrl = `${supabaseUrl}/storage/v1/object/public/domain-logos/${domainName}/${filename}`;
+
+    return cleanUrl;
+  } catch (e) {
+    console.warn(`⚠️ Warning: Could not clean image URL for ${domainName}: ${rawUrl}`, e);
+    return null;
+  }
+};
+
 const generateSitemap = async () => {
   console.log('🚀 Starting Sitemap Generation...');
 
@@ -119,18 +163,25 @@ const generateSitemap = async () => {
     });
 
     // 2. Dynamic Domain Pages
+    let imageCount = 0;
+    
     domains.forEach(domain => {
       const pageUrl = `${BASE_URL}/domain/${domain.name}`;
       const lastMod = domain.updated_at ? new Date(domain.updated_at).toISOString() : currentDate;
       
       let imageXml = '';
       if (domain.logo_url) {
-        const storageUrl = `${config.url}/storage/v1/object/public/domain-logos/${domain.name}/${domain.logo_url}`;
-        imageXml = `
+        // APPLY FIX: Use cleaner function instead of raw concatenation
+        const cleanUrl = cleanImageUrl(domain.logo_url, domain.name, config.url);
+        
+        if (cleanUrl) {
+          imageCount++;
+          imageXml = `
     <image:image>
-      <image:loc>${storageUrl}</image:loc>
+      <image:loc>${cleanUrl}</image:loc>
       <image:title>${domain.name} - Premium Domain Logo</image:title>
     </image:image>`;
+        }
       }
 
       xml += `  <url>
@@ -143,6 +194,8 @@ const generateSitemap = async () => {
     });
 
     xml += `</urlset>`;
+
+    console.log(`🖼️  Processed ${imageCount} valid domain images.`);
 
     // Write to public/sitemap.xml
     const publicPath = resolve('public', 'sitemap.xml');
