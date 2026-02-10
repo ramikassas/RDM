@@ -124,14 +124,15 @@ const generateSitemap = async () => {
   console.log('🚀 Starting Sitemap Generation...');
 
   try {
-    // Fetch all domains
+    // Fetch all active domains
     const { data: domains, error } = await supabase
       .from('domains')
-      .select('name, updated_at, logo_url, category');
+      .select('name, updated_at, logo_url, category')
+      .eq('status', 'active');
 
     if (error) throw error;
 
-    console.log(`✅ Fetched ${domains.length} domains from Supabase.`);
+    console.log(`✅ Fetched ${domains.length} active domains from Supabase.`);
 
     const currentDate = new Date().toISOString();
 
@@ -142,14 +143,22 @@ const generateSitemap = async () => {
         xsi:schemaLocation="http://www.sitemaps.org/schemas/sitemap/0.9 http://www.sitemaps.org/schemas/sitemap/0.9/sitemap.xsd http://www.google.com/schemas/sitemap-image/1.1 http://www.google.com/schemas/sitemap-image/1.1/sitemap-image.xsd">
 `;
 
-    // 1. Static Pages
+    // 1. Static Pages - 14 High-Priority Pages
     const staticPages = [
       { loc: '/', priority: '1.0', changefreq: 'daily' },
-      { loc: '/marketplace', priority: '0.9', changefreq: 'daily' },
-      { loc: '/about', priority: '0.7', changefreq: 'monthly' },
-      { loc: '/contact', priority: '0.7', changefreq: 'monthly' },
-      { loc: '/terms', priority: '0.5', changefreq: 'yearly' },
-      { loc: '/privacy', priority: '0.5', changefreq: 'yearly' },
+      { loc: '/home', priority: '0.95', changefreq: 'weekly' },
+      { loc: '/about', priority: '0.9', changefreq: 'monthly' },
+      { loc: '/contact', priority: '0.9', changefreq: 'monthly' },
+      { loc: '/marketplace', priority: '0.95', changefreq: 'daily' },
+      { loc: '/marketplaces', priority: '0.95', changefreq: 'daily' },
+      { loc: '/premium-com-domains', priority: '0.9', changefreq: 'weekly' },
+      { loc: '/find-premium-domains', priority: '0.9', changefreq: 'weekly' },
+      { loc: '/premium-domains-for-sale', priority: '0.9', changefreq: 'weekly' },
+      { loc: '/premium-domain-pricing', priority: '0.9', changefreq: 'weekly' },
+      { loc: '/sell-premium-domains', priority: '0.9', changefreq: 'weekly' },
+      { loc: '/transfer', priority: '0.85', changefreq: 'monthly' },
+      { loc: '/terms', priority: '0.7', changefreq: 'monthly' },
+      { loc: '/privacy', priority: '0.7', changefreq: 'monthly' },
     ];
 
     staticPages.forEach(page => {
@@ -171,7 +180,7 @@ const generateSitemap = async () => {
       
       let imageXml = '';
       if (domain.logo_url) {
-        // APPLY FIX: Use cleaner function instead of raw concatenation
+        // Use cleanImageUrl to properly format and deduplicate URL path
         const cleanUrl = cleanImageUrl(domain.logo_url, domain.name, config.url);
         
         if (cleanUrl) {
@@ -196,6 +205,9 @@ const generateSitemap = async () => {
     xml += `</urlset>`;
 
     console.log(`🖼️  Processed ${imageCount} valid domain images.`);
+    
+    const totalCount = staticPages.length + domains.length;
+    console.log(`✅ Sitemap generated successfully with ${staticPages.length} static pages + ${domains.length} domain pages = TOTAL ${totalCount} pages`);
 
     // Write to public/sitemap.xml
     const publicPath = resolve('public', 'sitemap.xml');
