@@ -3,9 +3,10 @@ export default async function handler(req) {
   const supabaseKey = process.env.VITE_SUPABASE_ANON_KEY;
   const baseUrl = 'https://rdm.bz';
 
-  // 1. الصفحات الثابتة (الأساسية)
+  // 1. قائمة صفحاتك الثابتة (كما أرسلتها سابقاً)
+  // يمكنك إضافة أو حذف أي صفحة من هنا يدوياً
   const staticPages = [
-    '',
+    '', // الصفحة الرئيسية
     '/marketplace',
     '/about',
     '/contact',
@@ -13,19 +14,20 @@ export default async function handler(req) {
     '/privacy',
     '/transfer',
     '/premium-domains-for-sale',
+    '/marketplaces',
+    '/premium-domain-pricing',
+    '/find-premium-domains',
     '/sell-premium-domains',
-    '/ai-domains',      // صفحات هبوط مهمة
-    '/saas-domains',
-    '/fintech-domains'
+    '/premium-com-domains'
   ];
 
   let domains = [];
-  let categories = [];
 
+  // 2. جلب الدومينات من قاعدة البيانات
   if (supabaseUrl && supabaseKey) {
     try {
-      // 2. جلب الدومينات من قاعدة البيانات
-      const domainsResponse = await fetch(
+      // نجلب الاسم وتاريخ التحديث فقط لتسريع العملية
+      const response = await fetch(
         `${supabaseUrl}/rest/v1/domains?select=name,updated_at`,
         {
           headers: {
@@ -34,42 +36,15 @@ export default async function handler(req) {
           },
         }
       );
-      domains = await domainsResponse.json();
-
-      // 3. جلب التصنيفات (Categories) المميزة
-      // ملاحظة: سنقوم بجلب كل التصنيفات الفريدة المستخدمة في الدومينات
-      const categoriesResponse = await fetch(
-        `${supabaseUrl}/rest/v1/domains?select=category`,
-        {
-          headers: {
-            apikey: supabaseKey,
-            Authorization: `Bearer ${supabaseKey}`,
-          },
-        }
-      );
-      const rawCategories = await categoriesResponse.json();
-      
-      // تنظيف القائمة: إزالة التكرار والفراغات
-      const uniqueCategories = new Set();
-      rawCategories.forEach(item => {
-        if (item.category) {
-            // بعض التصنيفات قد تكون مفصولة بفواصل، نفصلها
-            const cats = item.category.split(',').map(c => c.trim());
-            cats.forEach(c => {
-                if(c.length > 0) uniqueCategories.add(c);
-            });
-        }
-      });
-      categories = Array.from(uniqueCategories);
-
+      domains = await response.json();
     } catch (e) {
-      console.error("Error fetching data for sitemap", e);
+      console.error("Error fetching domains for sitemap", e);
     }
   }
 
-  // --- بناء الـ XML ---
+  // --- بناء ملف الـ XML ---
 
-  // أ) الصفحات الثابتة
+  // أ) تحويل الصفحات الثابتة إلى XML
   const staticXml = staticPages.map(page => `
     <url>
       <loc>${baseUrl}${page}</loc>
@@ -78,7 +53,7 @@ export default async function handler(req) {
     </url>
   `).join('');
 
-  // ب) صفحات الدومينات (الأهم)
+  // ب) تحويل الدومينات إلى XML
   const domainXml = domains.map(domain => `
     <url>
       <loc>${baseUrl}/domain/${domain.name}</loc>
@@ -88,31 +63,17 @@ export default async function handler(req) {
     </url>
   `).join('');
 
-  // ج) صفحات التصنيفات (Categories)
-  // نفترض أن رابط التصنيف في موقعك هو /marketplace?category=XYZ
-  // أو إذا كان لديك روابط مخصصة مثل /category/ai
-  const categoryXml = categories.map(cat => {
-    // تحويل الاسم لرابط (مثلاً: "AI Domains" -> "AI%20Domains")
-    const slug = encodeURIComponent(cat);
-    return `
-    <url>
-      <loc>${baseUrl}/marketplace?category=${slug}</loc>
-      <changefreq>weekly</changefreq>
-      <priority>0.7</priority>
-    </url>
-    `;
-  }).join('');
-
+  // ج) تجميع الخريطة النهائية
   const sitemap = `<?xml version="1.0" encoding="UTF-8"?>
     <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
       ${staticXml}
-      ${categoryXml}
       ${domainXml}
     </urlset>`;
 
   return new Response(sitemap, {
     headers: {
       'Content-Type': 'application/xml',
+      // نجبر المتصفحات وجوجل على تحديث الخريطة كل ساعة
       'Cache-Control': 's-maxage=3600, stale-while-revalidate'
     },
   });
