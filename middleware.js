@@ -1,26 +1,29 @@
-import { NextResponse } from 'next/server';
-
 export const config = {
-  matcher: '/domain/:path*', // يشتغل فقط على روابط الدومينات
+  matcher: '/domain/:path*',
 };
 
-export default function middleware(req) {
-  const userAgent = req.headers.get('user-agent') || '';
+export default async function middleware(request) {
+  const url = new URL(request.url);
+  const userAgent = request.headers.get('user-agent') || '';
   
-  // قائمة الروبوتات التي نريد تحويلها (واتساب، فيسبوك، تويتر، الخ)
+  // اكتشاف الروبوتات
   const isBot = /facebookexternalhit|whatsapp|twitterbot|linkedinbot|telegrambot|discordbot/i.test(userAgent);
 
   if (isBot) {
-    const url = req.nextUrl.clone();
-    // نأخذ اسم الدومين من الرابط
     const domainName = url.pathname.split('/').pop();
     
-    // نوجهه إلى صفحة خاصة لتجهيز الصورة والعنوان
-    url.pathname = `/api/social-preview`;
-    url.searchParams.set('domain', domainName);
+    // نجهز رابط الـ API الداخلي
+    const apiUrl = new URL(request.url);
+    apiUrl.pathname = '/api/social-preview';
+    apiUrl.searchParams.set('domain', domainName);
     
-    return NextResponse.rewrite(url);
+    // نقوم بجلب المحتوى من الـ API يدوياً (Proxy Mode)
+    const apiResponse = await fetch(apiUrl);
+    
+    // نرسل نتيجة الـ API مباشرة للروبوت
+    return new Response(apiResponse.body, {
+      status: apiResponse.status,
+      headers: apiResponse.headers
+    });
   }
-
-  return NextResponse.next();
 }
