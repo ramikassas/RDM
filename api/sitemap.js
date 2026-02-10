@@ -3,10 +3,9 @@ export default async function handler(req) {
   const supabaseKey = process.env.VITE_SUPABASE_ANON_KEY;
   const baseUrl = 'https://rdm.bz';
 
-  // 1. قائمة صفحاتك الثابتة (كما أرسلتها سابقاً)
-  // يمكنك إضافة أو حذف أي صفحة من هنا يدوياً
+  // 1. القائمة الثابتة (تأكدنا من الفواصل هنا)
   const staticPages = [
-    '', // الصفحة الرئيسية
+    '',
     '/marketplace',
     '/about',
     '/contact',
@@ -18,6 +17,9 @@ export default async function handler(req) {
     '/premium-domain-pricing',
     '/find-premium-domains',
     '/sell-premium-domains',
+    '/ai-domains',
+    '/saas-domains',
+    '/fintech-domains',
     '/premium-com-domains'
   ];
 
@@ -26,7 +28,6 @@ export default async function handler(req) {
   // 2. جلب الدومينات من قاعدة البيانات
   if (supabaseUrl && supabaseKey) {
     try {
-      // نجلب الاسم وتاريخ التحديث فقط لتسريع العملية
       const response = await fetch(
         `${supabaseUrl}/rest/v1/domains?select=name,updated_at`,
         {
@@ -36,7 +37,12 @@ export default async function handler(req) {
           },
         }
       );
-      domains = await response.json();
+      
+      if (response.ok) {
+        domains = await response.json();
+      } else {
+        console.error("Supabase error:", response.statusText);
+      }
     } catch (e) {
       console.error("Error fetching domains for sitemap", e);
     }
@@ -44,7 +50,7 @@ export default async function handler(req) {
 
   // --- بناء ملف الـ XML ---
 
-  // أ) تحويل الصفحات الثابتة إلى XML
+  // أ) تحويل الصفحات الثابتة
   const staticXml = staticPages.map(page => `
     <url>
       <loc>${baseUrl}${page}</loc>
@@ -53,8 +59,10 @@ export default async function handler(req) {
     </url>
   `).join('');
 
-  // ب) تحويل الدومينات إلى XML
-  const domainXml = domains.map(domain => `
+  // ب) تحويل الدومينات
+  // نتأكد أن domains مصفوفة لتجنب الأخطاء
+  const safeDomains = Array.isArray(domains) ? domains : [];
+  const domainXml = safeDomains.map(domain => `
     <url>
       <loc>${baseUrl}/domain/${domain.name}</loc>
       <lastmod>${domain.updated_at || new Date().toISOString()}</lastmod>
@@ -63,7 +71,7 @@ export default async function handler(req) {
     </url>
   `).join('');
 
-  // ج) تجميع الخريطة النهائية
+  // ج) تجميع الخريطة
   const sitemap = `<?xml version="1.0" encoding="UTF-8"?>
     <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
       ${staticXml}
@@ -73,7 +81,6 @@ export default async function handler(req) {
   return new Response(sitemap, {
     headers: {
       'Content-Type': 'application/xml',
-      // نجبر المتصفحات وجوجل على تحديث الخريطة كل ساعة
       'Cache-Control': 's-maxage=3600, stale-while-revalidate'
     },
   });
