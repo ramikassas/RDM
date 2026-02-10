@@ -142,17 +142,22 @@ const generateSitemap = async () => {
         xsi:schemaLocation="http://www.sitemaps.org/schemas/sitemap/0.9 http://www.sitemaps.org/schemas/sitemap/0.9/sitemap.xsd http://www.google.com/schemas/sitemap-image/1.1 http://www.google.com/schemas/sitemap-image/1.1/sitemap-image.xsd">
 `;
 
-    // 1. Static Pages - Critical SEO Pages
-    const staticPages = [
-      { loc: '/', priority: '1.0', changefreq: 'daily' },
-      { loc: '/premium-com-domains', priority: '0.9', changefreq: 'weekly' },
-      { loc: '/find-premium-domains', priority: '0.9', changefreq: 'weekly' },
-      { loc: '/premium-domains-for-sale', priority: '0.9', changefreq: 'weekly' },
-      { loc: '/premium-domain-pricing', priority: '0.9', changefreq: 'weekly' },
-      { loc: '/sell-premium-domains', priority: '0.9', changefreq: 'weekly' },
-      { loc: '/marketplaces', priority: '0.9', changefreq: 'weekly' },
-      { loc: '/about', priority: '0.9', changefreq: 'weekly' },
-    ];
+// 1. Static Pages - Critical SEO Pages
+const staticPages = [
+  { loc: '/', priority: '1.0', changefreq: 'daily' },
+  { loc: '/marketplace', priority: '0.95', changefreq: 'daily' },
+  { loc: '/marketplaces', priority: '0.95', changefreq: 'daily' },
+  { loc: '/premium-com-domains', priority: '0.9', changefreq: 'weekly' },
+  { loc: '/find-premium-domains', priority: '0.9', changefreq: 'weekly' },
+  { loc: '/premium-domains-for-sale', priority: '0.9', changefreq: 'weekly' },
+  { loc: '/premium-domain-pricing', priority: '0.9', changefreq: 'weekly' },
+  { loc: '/sell-premium-domains', priority: '0.9', changefreq: 'weekly' },
+  { loc: '/about', priority: '0.9', changefreq: 'monthly' },
+  { loc: '/contact', priority: '0.9', changefreq: 'monthly' },
+  { loc: '/transfer', priority: '0.85', changefreq: 'monthly' },
+  { loc: '/terms', priority: '0.7', changefreq: 'monthly' },
+  { loc: '/privacy', priority: '0.7', changefreq: 'monthly' }
+];
 
     staticPages.forEach(page => {
       xml += `  <url>
