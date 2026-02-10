@@ -1,24 +1,20 @@
+
 {
+  "version": 2,
+  "buildCommand": "npm run build",
+  "outputDirectory": "dist",
   "rewrites": [
     {
       "source": "/sitemap.xml",
       "destination": "/sitemap.xml"
     },
     {
-      "source": "/sitemap-pages.xml",
-      "destination": "https://__SUPABASE_PROJECT_ID__.supabase.co/functions/v1/sitemap?type=pages"
-    },
-    {
-      "source": "/sitemap-domains.xml",
-      "destination": "https://__SUPABASE_PROJECT_ID__.supabase.co/functions/v1/sitemap?type=domains"
-    },
-    {
-      "source": "/api/sitemap",
-      "destination": "https://__SUPABASE_PROJECT_ID__.supabase.co/functions/v1/sitemap"
-    },
-    {
       "source": "/(.*)",
       "destination": "/index.html"
     }
-  ]
+  ],
+  "env": {
+    "SUPABASE_URL": "Must be set in Vercel Dashboard",
+    "SUPABASE_ANON_KEY": "Must be set in Vercel Dashboard"
+  }
 }
