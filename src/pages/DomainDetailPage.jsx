@@ -5,7 +5,7 @@ import { motion } from 'framer-motion';
 import { 
   Check, ShoppingCart, Send, TrendingUp, ExternalLink, Globe, ShieldCheck, 
   AlertCircle, Lock, Flame, Tag, BarChart3, MessageCircle, Clock, 
-  ArrowRight, Info, Server, FileText, Target, CreditCard, RefreshCcw, Sparkles 
+  ArrowRight, Info, Server, FileText, Target, CreditCard, RefreshCcw, Sparkles, DollarSign, Mail 
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/lib/customSupabaseClient';
@@ -24,27 +24,8 @@ import { useNoCache } from '@/hooks/useNoCache';
 import { DomainDetailSkeleton } from '@/components/LoadingSkeleton';
 import { isUnstoppableDomain, getUnstoppableDomainsUrl } from '@/utils/unstoppableDomainsHelper';
 import { isDomainSold } from '@/utils/isDomainSold';
-
-/*
- * REPORT: SEO RACE CONDITION FIX
- * 
- * 1. ISSUE:
- *    Previously, the SEO component was only rendered AFTER the domain data was fetched (inside the !loading block).
- *    This meant Googlebot would see the default "Loading..." or generic app title during the initial render phase,
- *    often indexing the wrong title before the Javascript could update it.
- * 
- * 2. FIX:
- *    - Extracted `domainName` from URL immediately at the component top level.
- *    - Moved `<SEO />` component OUTSIDE the loading check.
- *    - Implemented a "Pre-loading SEO State" using the URL param `domainName` to generate a meaningful title immediately.
- *    - Title hierarchy:
- *       1. Loading: `${domainName} - Checking Availability... | RDM`
- *       2. Loaded: `${domain.name} - Premium Domain | RDM` (or custom SEO title)
- * 
- * 3. BENEFIT:
- *    Googlebot now immediately sees a relevant title containing the target keyword (the domain name) 
- *    even while the actual database fetch is still pending.
- */
+import { getPurchaseOptionsButtons } from '@/utils/purchaseOptionsHelper';
+import { AVAILABLE_ICONS } from '@/config/PURCHASE_OPTIONS_BUTTONS';
 
 const SectionCard = ({ title, icon, children, className = "" }) => (
   <section className={`bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden ${className}`}>
@@ -68,6 +49,12 @@ const StatItem = ({ label, value, icon }) => (
   </div>
 );
 
+const IconRenderer = ({ name, className }) => {
+  const iconDef = AVAILABLE_ICONS.find(i => i.value === name);
+  const IconComp = iconDef ? iconDef.component : ExternalLink;
+  return <IconComp className={className} />;
+};
+
 const DomainDetailPage = () => {
   const { domainName } = useParams();
   const [showOfferForm, setShowOfferForm] = useState(false);
@@ -89,9 +76,10 @@ const DomainDetailPage = () => {
 
   // Fetch Domain Function
   const fetchDomain = useCallback(async () => {
+      // Ensure we explicitly fetch purchase_options_config
       const { data: domainData, error: domainError } = await supabase
         .from('domains')
-        .select('*')
+        .select('*, purchase_options_config') 
         .eq('name', domainName)
         .single();
       
@@ -252,6 +240,7 @@ const DomainDetailPage = () => {
     }
   };
 
+  // Button Actions
   const handleBuyNow = () => {
     if (isSold) return;
     if (window.gtag) window.gtag('event', 'click_buy_now', { domain_name: domain.name, domain_price: domain.price });
@@ -290,7 +279,7 @@ const DomainDetailPage = () => {
   const handleWhatsAppContact = () => {
       window.open(`https://wa.me/905313715417?text=${encodeURIComponent(`Is the domain ${domain.name} available?`)}`, '_blank');
   }
-  
+
   const handleWhoisLookup = async () => {
     if (isUnstoppable) {
       toast({ title: "WHOIS Not Available", description: "WHOIS data is not available for Web3 domains.", variant: "destructive" });
@@ -313,21 +302,32 @@ const DomainDetailPage = () => {
     }
   };
 
+  const executeAction = (btn) => {
+    if (isSold && btn.id !== 'buyNow') return; // Only block actions if needed, generally sold blocks all
+    
+    switch (btn.action) {
+      case 'buyNow': handleBuyNow(); break;
+      case 'makeOffer': handleMakeOffer(); break;
+      case 'chat': handleWhatsAppContact(); break;
+      case 'buyViaGoDaddy': handleGoDaddyBuy(); break;
+      case 'buyViaUnstoppable': 
+         window.open(getUnstoppableDomainsUrl(domain.name), '_blank', 'noopener,noreferrer');
+         break;
+      default:
+         // Custom URL
+         if (btn.url) window.open(btn.url, '_blank', 'noopener,noreferrer');
+         break;
+    }
+  };
+
   // --- SEO & DATA PREPARATION ---
   
-  // 1. Calculate Loading State
-  // We determine loading state based on hook return AND data availability
   const isDataLoading = loading || (!domain && !fetchError);
-
-  // 2. Prepare Display Data (Safe Handling)
-  // Even if domain is null, we can render basic SEO from URL param
   const currentDomainStatus = domain ? { ...domain, status: realtimeStatus || domain.status } : null;
   const isSold = currentDomainStatus ? isDomainSold(currentDomainStatus) : false;
-  const isUnstoppable = isUnstoppableDomain(domainName); // Can determine this from URL string alone
+  const isUnstoppable = isUnstoppableDomain(domainName);
   const domainLen = domainName.split('.')[0].length;
 
-  // 3. SEO Data Construction
-  // CRITICAL: We create specific titles for Loading vs Loaded states
   const displayTitle = isDataLoading 
       ? `${domainName} - Checking Availability... | RDM`
       : (domain?.seo?.page_title || `${domainName} - Premium Domain | RDM`);
@@ -346,7 +346,6 @@ const DomainDetailPage = () => {
     "premium domain purchase"
   ].join(', ');
 
-  // Image handling
   const socialUrl = `https://rdm.bz/domain/${domainName}`;
   const currentUrl = `https://rdm.bz/domain/${domainName}`;
   
@@ -377,13 +376,18 @@ const DomainDetailPage = () => {
       sku: domain.name
   } : null;
 
+  // Prepare buttons
+  let purchaseButtons = [];
+  if (domain) {
+    purchaseButtons = getPurchaseOptionsButtons(domain);
+    // Filter conditional Unstoppable Button if needed
+    if (!isUnstoppable) {
+      purchaseButtons = purchaseButtons.filter(b => b.id !== 'buyViaUnstoppable');
+    }
+  }
+
   return (
     <>
-      {/* 
-        CRITICAL SEO FIX: 
-        SEO component is now rendered ALWAYS, even during loading.
-        This ensures Googlebot sees a valid title tag immediately.
-      */}
       <SEO 
         title={displayTitle}
         description={displayDescription} 
@@ -581,35 +585,51 @@ const DomainDetailPage = () => {
                               <h4 className="font-bold text-red-700">Domain Sold</h4>
                               <p className="text-sm text-red-600">This domain is no longer available.</p>
                             </div>
-                        ) : isUnstoppable ? (
-                            <a href={getUnstoppableDomainsUrl(domain.name)} target="_blank" rel="noopener noreferrer">
-                              <Button size="lg" className="w-full h-14 text-base font-bold bg-blue-600 hover:bg-blue-700">
-                                <Globe className="w-5 h-5 mr-2" /> Buy via Unstoppable Domains
-                              </Button>
-                            </a>
                         ) : (
-                            <>
-                              <Button size="lg" onClick={handleBuyNow} disabled={domain.status !== 'available'} className="w-full h-14 text-base font-bold bg-emerald-600 hover:bg-emerald-700 shadow-md shadow-emerald-200">
-                                  <ShoppingCart className="w-5 h-5 mr-2" /> Buy Now
-                              </Button>
+                          <>
+                           {purchaseButtons.map(btn => {
+                              // Styles based on button type
+                              const isOutline = btn.variant === 'outline' || btn.color === 'outline';
+                              const isYellow = btn.color === 'yellow';
+                              const isGreen = btn.color === 'green' && btn.backgroundColor?.includes('green-50'); // Chat button style
+
+                              let buttonClasses = "w-full h-12 text-base font-bold flex items-center justify-center";
                               
-                              <div className="grid grid-cols-2 gap-3">
-                                  <Button variant="outline" onClick={handleMakeOffer} disabled={domain.status !== 'available'} className="h-12 font-semibold">
-                                    <Send className="w-4 h-4 mr-2" /> Offer
-                                  </Button>
-                                  <Button variant="outline" onClick={handleWhatsAppContact} className="h-12 font-semibold text-green-700 bg-green-50 border-green-200 hover:bg-green-100">
-                                    <MessageCircle className="w-4 h-4 mr-2" /> Chat
-                                  </Button>
-                              </div>
+                              if (btn.id === 'buyNow' || btn.color === 'emerald') {
+                                buttonClasses += " bg-emerald-600 hover:bg-emerald-700 text-white shadow-md shadow-emerald-200";
+                              } else if (isOutline) {
+                                buttonClasses += " border border-slate-200 bg-white hover:bg-slate-50 text-slate-700";
+                              } else if (isGreen) {
+                                buttonClasses += " bg-green-50 border border-green-200 hover:bg-green-100 text-green-700";
+                              } else if (isYellow) {
+                                buttonClasses += " bg-[#FFD700] hover:bg-[#E6C200] text-slate-900 border border-yellow-400/50";
+                              } else if (btn.color === 'blue') {
+                                buttonClasses += " bg-blue-600 hover:bg-blue-700 text-white";
+                              } else if (btn.color === 'slate') {
+                                buttonClasses += " bg-slate-900 hover:bg-slate-800 text-white";
+                              }
+
+                              // Layout handling for buttons that should be side-by-side
+                              // This is tricky with dynamic ordering. For simplicity, we stack most.
+                              // If we detect "Offer" and "Chat" are consecutive, we could wrap them.
+                              // For now, full width stack is safest and responsive.
                               
-                              <Button 
-                                  variant="secondary" 
-                                  onClick={handleGoDaddyBuy} 
-                                  className="w-full bg-[#FFD700] hover:bg-[#E6C200] text-slate-900 font-bold border border-yellow-400/50"
-                              >
-                                  Buy via GoDaddy <ExternalLink className="w-4 h-4 ml-2 opacity-70" />
-                              </Button>
-                            </>
+                              // We can apply specific class overrides if needed, e.g. h-14 for main button
+                              if (btn.id === 'buyNow') buttonClasses = buttonClasses.replace('h-12', 'h-14');
+
+                              return (
+                                <Button 
+                                  key={btn.id}
+                                  onClick={() => executeAction(btn)}
+                                  disabled={domain.status !== 'available' && btn.id !== 'buyNow'} // Basic disable logic
+                                  className={buttonClasses}
+                                >
+                                  <IconRenderer name={btn.icon} className="w-5 h-5 mr-2" />
+                                  {btn.label}
+                                </Button>
+                              );
+                           })}
+                          </>
                         )}
                       </div>
 
