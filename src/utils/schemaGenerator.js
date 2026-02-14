@@ -34,14 +34,20 @@ export const getOrganizationSchema = () => {
     "name": "Rare Domains Marketplace",
     "url": "https://rdm.bz",
     "logo": "https://rdm.bz/logo.png",
-    "sameAs": [
+"sameAs": [
       "https://instagram.com/rami_kassas",
-      "https://x.com/rami_kassas"
+      "https://x.com/rami_kassas",
+      "https://linkedin.com/in/rami-kassas",
+      "https://wa.me/905313715417",
+      "https://www.facebook.com/profile.php?id=61559777456490"
     ],
-    "contactPoint": {
+"contactPoint": {
       "@type": "ContactPoint",
       "contactType": "customer service",
-      "email": "info@rdm.bz"
+      "email": "info@rdm.bz",
+      "telephone": "+905313715417",
+      "areaServed": "World",
+      "availableLanguage": "English"
     }
   };
 };
