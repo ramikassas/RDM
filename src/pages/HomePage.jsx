@@ -47,7 +47,7 @@ const HomePage = () => {
     "url": "https://rdm.bz",
     "logo": "https://rdm.bz/logo.png",
     "description": "Premium marketplace for rare and exclusive domain names.",
-    "sameAs": ["https://x.com/rami_kassas", "https://instagram.com/rami_kassas"],
+    "sameAs": ["https://x.com/rami_kassas", "https://instagram.com/rami_kassas", "https://www.facebook.com/profile.php?id=61559777456490", "https://linkedin.com/in/rami-kassas", "https://wa.me/905313715417"],
     "contactPoint": {
         "@type": "ContactPoint",
         "telephone": "+905313715417",
