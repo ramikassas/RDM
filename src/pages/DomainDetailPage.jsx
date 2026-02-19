@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState, useCallback } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
@@ -593,35 +592,45 @@ const DomainDetailPage = () => {
                               const isYellow = btn.color === 'yellow';
                               const isGreen = btn.color === 'green' && btn.backgroundColor?.includes('green-50'); // Chat button style
 
-                              let buttonClasses = "w-full h-12 text-base font-bold flex items-center justify-center";
+                              let buttonClasses = "w-full h-12 text-base font-bold flex items-center justify-center transition-all";
                               
                               if (btn.id === 'buyNow' || btn.color === 'emerald') {
                                 buttonClasses += " bg-emerald-600 hover:bg-emerald-700 text-white shadow-md shadow-emerald-200";
-                              } else if (isOutline) {
-                                buttonClasses += " border border-slate-200 bg-white hover:bg-slate-50 text-slate-700";
+                              } else if (isOutline || btn.color === 'outline') {
+                                buttonClasses += " border-2 border-slate-200 bg-white hover:bg-slate-50 text-slate-700";
                               } else if (isGreen) {
                                 buttonClasses += " bg-green-50 border border-green-200 hover:bg-green-100 text-green-700";
-                              } else if (isYellow) {
+                              } else if (isYellow || btn.color === 'yellow') {
                                 buttonClasses += " bg-[#FFD700] hover:bg-[#E6C200] text-slate-900 border border-yellow-400/50";
                               } else if (btn.color === 'blue') {
                                 buttonClasses += " bg-blue-600 hover:bg-blue-700 text-white";
                               } else if (btn.color === 'slate') {
                                 buttonClasses += " bg-slate-900 hover:bg-slate-800 text-white";
+                              } else if (btn.color === 'red') {
+                                buttonClasses += " bg-red-500 hover:bg-red-600 text-white";
+                              } else if (btn.color === 'orange') {
+                                buttonClasses += " bg-orange-500 hover:bg-orange-600 text-white";
+                              } else if (btn.color === 'amber') {
+                                buttonClasses += " bg-amber-500 hover:bg-amber-600 text-white";
+                              } else if (btn.color === 'indigo') {
+                                buttonClasses += " bg-indigo-500 hover:bg-indigo-600 text-white";
+                              } else if (btn.color === 'purple') {
+                                buttonClasses += " bg-purple-500 hover:bg-purple-600 text-white";
+                              } else if (btn.color === 'pink') {
+                                buttonClasses += " bg-pink-500 hover:bg-pink-600 text-white";
+                              } else if (btn.color === 'gray') {
+                                buttonClasses += " bg-gray-200 hover:bg-gray-300 text-gray-900";
+                              } else if (btn.color === 'ghost') {
+                                buttonClasses += " bg-transparent hover:bg-slate-100 text-slate-900";
                               }
 
-                              // Layout handling for buttons that should be side-by-side
-                              // This is tricky with dynamic ordering. For simplicity, we stack most.
-                              // If we detect "Offer" and "Chat" are consecutive, we could wrap them.
-                              // For now, full width stack is safest and responsive.
-                              
-                              // We can apply specific class overrides if needed, e.g. h-14 for main button
                               if (btn.id === 'buyNow') buttonClasses = buttonClasses.replace('h-12', 'h-14');
 
                               return (
                                 <Button 
                                   key={btn.id}
                                   onClick={() => executeAction(btn)}
-                                  disabled={domain.status !== 'available' && btn.id !== 'buyNow'} // Basic disable logic
+                                  disabled={domain.status !== 'available' && btn.id !== 'buyNow'} 
                                   className={buttonClasses}
                                 >
                                   <IconRenderer name={btn.icon} className="w-5 h-5 mr-2" />
