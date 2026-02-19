@@ -16,18 +16,7 @@ const PreviewButton = ({ config }) => {
   
   let buttonClasses = "w-full h-12 font-bold mb-3 flex items-center justify-center gap-2 transition-all";
   
-  // 🌟 الأشكال الاحترافية الجديدة 🌟
-  if (config.color === 'gradient') {
-    buttonClasses += " bg-gradient-to-r from-emerald-500 to-teal-600 text-white border-0 shadow-lg shadow-emerald-500/30";
-  } else if (config.color === 'neon') {
-    buttonClasses += " bg-slate-900 text-emerald-400 border border-emerald-500/50 shadow-[0_0_15px_rgba(16,185,129,0.3)]";
-  } else if (config.color === '3d') {
-    buttonClasses += " bg-blue-600 text-white border-b-[4px] border-blue-800";
-  } else if (config.color === 'glass') {
-    buttonClasses += " bg-slate-900/80 backdrop-blur-md border border-slate-700 text-white shadow-xl";
-  } 
-  // الألوان الأساسية والمسطحة
-  else if (config.id === 'buyNow' || config.color === 'emerald') {
+  if (config.id === 'buyNow' || config.color === 'emerald') {
     buttonClasses += " bg-emerald-600 hover:bg-emerald-700 text-white shadow-md shadow-emerald-200";
   } else if (config.id === 'makeOffer' || isOutline) {
     buttonClasses += " border-2 border-slate-200 bg-white hover:bg-slate-50 text-slate-700";
