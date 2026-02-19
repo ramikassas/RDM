@@ -1,9 +1,8 @@
 import { 
   ShoppingCart, Send, MessageCircle, ExternalLink, Globe, CreditCard, Lock, DollarSign, Mail,
-  // أيقونات احترافية جديدة تمت إضافتها
-  BadgeDollarSign, Wallet, Banknote, Handshake, ShieldCheck, LockKeyhole, 
-  Briefcase, FileBadge, Zap, Sparkles, MessagesSquare, Bitcoin, Rocket, 
-  Gem, Scale, TrendingUp
+  // أيقونات أساسية وآمنة وتعمل على جميع الإصدارات
+  Wallet, Banknote, ShieldCheck, Briefcase, Zap, Star, MessageSquare, Rocket, 
+  TrendingUp, Award, Key, CheckCircle
 } from 'lucide-react';
 
 export const BUILT_IN_BUTTONS = [
@@ -84,33 +83,29 @@ export const BUILT_IN_BUTTONS = [
 
 export const AVAILABLE_ICONS = [
   // 💰 Finance & Sales (المالية والمبيعات)
-  { value: 'BadgeDollarSign', label: 'Premium Sale (Badge)', component: BadgeDollarSign },
+  { value: 'Award', label: 'Premium Sale (Badge)', component: Award },
   { value: 'Wallet', label: 'Wallet / Crypto', component: Wallet },
   { value: 'Banknote', label: 'Cash / Banknote', component: Banknote },
   { value: 'CreditCard', label: 'Credit Card', component: CreditCard },
   { value: 'DollarSign', label: 'Dollar Sign', component: DollarSign },
-  { value: 'Bitcoin', label: 'Web3 / Crypto Domain', component: Bitcoin },
 
   // 🤝 Negotiation & Communication (التفاوض والتواصل)
-  { value: 'Handshake', label: 'Deal / Handshake', component: Handshake },
-  { value: 'MessagesSquare', label: 'Negotiate (Chat)', component: MessagesSquare },
+  { value: 'MessageSquare', label: 'Negotiate (Chat)', component: MessageSquare },
   { value: 'Send', label: 'Send Offer', component: Send },
   { value: 'MessageCircle', label: 'WhatsApp / Chat', component: MessageCircle },
   { value: 'Mail', label: 'Email', component: Mail },
 
   // 🛡️ Trust & Security (الثقة والأمان للاستحواذ)
   { value: 'ShieldCheck', label: 'Secure Transfer (Shield)', component: ShieldCheck },
-  { value: 'LockKeyhole', label: 'Safe / Escrow', component: LockKeyhole },
-  { value: 'Scale', label: 'Legal / Escrow', component: Scale },
-  { value: 'FileBadge', label: 'Certified / Verified', component: FileBadge },
+  { value: 'Key', label: 'Safe / Escrow', component: Key },
+  { value: 'CheckCircle', label: 'Certified / Verified', component: CheckCircle },
   { value: 'Lock', label: 'Lock (Standard)', component: Lock },
 
   // 🚀 Premium, Tech & Assets (التميز والأصول)
-  { value: 'Gem', label: 'Premium / Rare (Gem)', component: Gem },
   { value: 'TrendingUp', label: 'Investment / Value', component: TrendingUp },
   { value: 'Briefcase', label: 'Corporate / Business', component: Briefcase },
   { value: 'Rocket', label: 'Fast Transfer / Launch', component: Rocket },
-  { value: 'Sparkles', label: 'Featured / New', component: Sparkles },
+  { value: 'Star', label: 'Featured / Premium', component: Star },
   { value: 'Zap', label: 'Instant Action', component: Zap },
   { value: 'Globe', label: 'Web / Domain', component: Globe },
   
