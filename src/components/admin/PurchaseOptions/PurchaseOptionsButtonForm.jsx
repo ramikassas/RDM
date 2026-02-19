@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -6,7 +5,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { AVAILABLE_ICONS } from '@/config/PURCHASE_OPTIONS_BUTTONS';
-import { v4 as uuidv4 } from 'uuid'; // Fallback if not available, simple generator below
+import { v4 as uuidv4 } from 'uuid';
 
 const generateId = () => Math.random().toString(36).substr(2, 9);
 
@@ -16,7 +15,7 @@ const PurchaseOptionsButtonForm = ({ initialData, onSave, onCancel }) => {
     label: '',
     url: '',
     icon: 'ExternalLink',
-    color: 'emerald', // simplified color selection for now
+    color: 'emerald',
     enabled: true,
     type: 'custom',
     order: 99
@@ -106,7 +105,7 @@ const PurchaseOptionsButtonForm = ({ initialData, onSave, onCancel }) => {
         </div>
 
         <div className="space-y-2">
-           <Label>Button Color Style</Label>
+           <Label>Button Style / Color</Label>
            <Select 
             value={formData.color} 
             onValueChange={(val) => handleChange('color', val)}
@@ -114,20 +113,20 @@ const PurchaseOptionsButtonForm = ({ initialData, onSave, onCancel }) => {
             <SelectTrigger>
               <SelectValue placeholder="Select Style" />
             </SelectTrigger>
-<SelectContent>
-              {/* الألوان الأساسية للإجراءات */}
+            <SelectContent>
+              <SelectItem value="gradient">✨ Premium Gradient</SelectItem>
+              <SelectItem value="neon">🌟 Neon Glow (Dark)</SelectItem>
+              <SelectItem value="3d">📦 3D Pop Style</SelectItem>
+              <SelectItem value="glass">💎 Dark Glassmorphism</SelectItem>
+              
               <SelectItem value="emerald">Green (Success / Buy Now)</SelectItem>
               <SelectItem value="blue">Blue (Primary / Info)</SelectItem>
               <SelectItem value="red">Red (Urgent / Danger)</SelectItem>
               <SelectItem value="orange">Orange (Warning / Warm)</SelectItem>
-              
-              {/* ألوان إضافية للتميز */}
               <SelectItem value="amber">Amber / Yellow</SelectItem>
               <SelectItem value="indigo">Indigo</SelectItem>
               <SelectItem value="purple">Purple</SelectItem>
               <SelectItem value="pink">Pink</SelectItem>
-              
-              {/* الألوان المحايدة والشفافة */}
               <SelectItem value="slate">Dark / Slate</SelectItem>
               <SelectItem value="gray">Light Gray</SelectItem>
               <SelectItem value="outline">Outline (Transparent with Border)</SelectItem>
