@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { ShoppingCart, Send, MessageCircle, ExternalLink, Globe, CreditCard, Lock, DollarSign, Mail, Phone, Calendar } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -12,13 +11,11 @@ const IconRenderer = ({ name, className }) => {
 };
 
 const PreviewButton = ({ config }) => {
-  // Styles based on configuration or built-in defaults
   const isOutline = config.variant === 'outline' || config.color === 'outline';
   const isYellow = config.color === 'yellow';
   
   let buttonClasses = "w-full h-12 font-bold mb-3 flex items-center justify-center gap-2 transition-all";
   
-  // Mimic the styling in DomainDetailPage
   if (config.id === 'buyNow' || config.color === 'emerald') {
     buttonClasses += " bg-emerald-600 hover:bg-emerald-700 text-white shadow-md shadow-emerald-200";
   } else if (config.id === 'makeOffer' || isOutline) {
@@ -31,9 +28,24 @@ const PreviewButton = ({ config }) => {
      buttonClasses += " bg-blue-600 hover:bg-blue-700 text-white";
   } else if (config.color === 'slate') {
      buttonClasses += " bg-slate-900 hover:bg-slate-800 text-white";
+  } else if (config.color === 'red') {
+     buttonClasses += " bg-red-500 hover:bg-red-600 text-white";
+  } else if (config.color === 'orange') {
+     buttonClasses += " bg-orange-500 hover:bg-orange-600 text-white";
+  } else if (config.color === 'amber') {
+     buttonClasses += " bg-amber-500 hover:bg-amber-600 text-white";
+  } else if (config.color === 'indigo') {
+     buttonClasses += " bg-indigo-500 hover:bg-indigo-600 text-white";
+  } else if (config.color === 'purple') {
+     buttonClasses += " bg-purple-500 hover:bg-purple-600 text-white";
+  } else if (config.color === 'pink') {
+     buttonClasses += " bg-pink-500 hover:bg-pink-600 text-white";
+  } else if (config.color === 'gray') {
+     buttonClasses += " bg-gray-200 hover:bg-gray-300 text-gray-900";
+  } else if (config.color === 'ghost') {
+     buttonClasses += " bg-transparent hover:bg-slate-100 text-slate-900";
   }
 
-  // Opacity for disabled in preview
   if (!config.enabled) {
     buttonClasses += " opacity-40 grayscale cursor-not-allowed";
   }
