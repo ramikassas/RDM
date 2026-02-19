@@ -226,7 +226,6 @@ const DomainDetailPage = () => {
       const { data, error } = await supabase.from('domains').select('*').limit(20);
       if (error) throw error;
       if (data && data.length > 0) {
-        // Randomize but filter out current domain
         const shuffled = data.sort(() => 0.5 - Math.random());
         const filtered = shuffled.filter(d => d.name !== domainName).slice(0, 3);
         setRecommended(filtered);
@@ -302,7 +301,7 @@ const DomainDetailPage = () => {
   };
 
   const executeAction = (btn) => {
-    if (isSold && btn.id !== 'buyNow') return; // Only block actions if needed, generally sold blocks all
+    if (isSold && btn.id !== 'buyNow') return; 
     
     switch (btn.action) {
       case 'buyNow': handleBuyNow(); break;
@@ -313,7 +312,6 @@ const DomainDetailPage = () => {
          window.open(getUnstoppableDomainsUrl(domain.name), '_blank', 'noopener,noreferrer');
          break;
       default:
-         // Custom URL
          if (btn.url) window.open(btn.url, '_blank', 'noopener,noreferrer');
          break;
     }
@@ -379,7 +377,6 @@ const DomainDetailPage = () => {
   let purchaseButtons = [];
   if (domain) {
     purchaseButtons = getPurchaseOptionsButtons(domain);
-    // Filter conditional Unstoppable Button if needed
     if (!isUnstoppable) {
       purchaseButtons = purchaseButtons.filter(b => b.id !== 'buyViaUnstoppable');
     }
@@ -434,7 +431,7 @@ const DomainDetailPage = () => {
                         domainName={domain.name} 
                         className={`mb-0 ${isSold ? 'grayscale opacity-80' : ''}`}
                         imageClassName="max-h-[160px] max-w-[280px]"
-                        loading="eager" // Main image eager loaded
+                        loading="eager" 
                       />
                     ) : (
                       <div className="w-[200px] h-[160px] bg-slate-50 rounded-xl flex items-center justify-center border border-slate-100 text-slate-300 font-bold text-xl">
@@ -587,14 +584,24 @@ const DomainDetailPage = () => {
                         ) : (
                           <>
                            {purchaseButtons.map(btn => {
-                              // Styles based on button type
                               const isOutline = btn.variant === 'outline' || btn.color === 'outline';
                               const isYellow = btn.color === 'yellow';
-                              const isGreen = btn.color === 'green' && btn.backgroundColor?.includes('green-50'); // Chat button style
+                              const isGreen = btn.color === 'green' && btn.backgroundColor?.includes('green-50'); 
 
                               let buttonClasses = "w-full h-12 text-base font-bold flex items-center justify-center transition-all";
                               
-                              if (btn.id === 'buyNow' || btn.color === 'emerald') {
+                              // 🌟 الأشكال الاحترافية الجديدة 🌟
+                              if (btn.color === 'gradient') {
+                                buttonClasses += " bg-gradient-to-r from-emerald-500 to-teal-600 text-white border-0 shadow-lg shadow-emerald-500/30 hover:shadow-xl hover:shadow-emerald-500/40 hover:-translate-y-0.5 duration-300";
+                              } else if (btn.color === 'neon') {
+                                buttonClasses += " bg-slate-900 text-emerald-400 border border-emerald-500/50 shadow-[0_0_15px_rgba(16,185,129,0.3)] hover:bg-slate-800 hover:shadow-[0_0_25px_rgba(16,185,129,0.6)] hover:-translate-y-0.5 duration-300";
+                              } else if (btn.color === '3d') {
+                                buttonClasses += " bg-blue-600 text-white border-b-[4px] border-blue-800 hover:bg-blue-500 hover:border-blue-700 active:border-b-0 active:translate-y-[4px]";
+                              } else if (btn.color === 'glass') {
+                                buttonClasses += " bg-slate-900/80 backdrop-blur-md border border-slate-700 text-white shadow-xl hover:bg-slate-800/90 hover:shadow-2xl hover:-translate-y-0.5 duration-300";
+                              } 
+                              // الألوان الأساسية والمسطحة
+                              else if (btn.id === 'buyNow' || btn.color === 'emerald') {
                                 buttonClasses += " bg-emerald-600 hover:bg-emerald-700 text-white shadow-md shadow-emerald-200";
                               } else if (isOutline || btn.color === 'outline') {
                                 buttonClasses += " border-2 border-slate-200 bg-white hover:bg-slate-50 text-slate-700";
