@@ -1,5 +1,10 @@
-
-import { ShoppingCart, Send, MessageCircle, ExternalLink, Globe, CreditCard, Lock, DollarSign, Mail } from 'lucide-react';
+import { 
+  ShoppingCart, Send, MessageCircle, ExternalLink, Globe, CreditCard, Lock, DollarSign, Mail,
+  // أيقونات احترافية جديدة تمت إضافتها
+  BadgeDollarSign, Wallet, Banknote, Handshake, ShieldCheck, LockKeyhole, 
+  Briefcase, FileBadge, Zap, Sparkles, MessagesSquare, Bitcoin, Rocket, 
+  Gem, Scale, TrendingUp
+} from 'lucide-react';
 
 export const BUILT_IN_BUTTONS = [
   {
@@ -8,7 +13,7 @@ export const BUILT_IN_BUTTONS = [
     icon: 'ShoppingCart',
     color: 'emerald',
     hoverColor: 'emerald-700',
-    action: 'buyNow', // mapped to internal function
+    action: 'buyNow', 
     description: 'Initiates the direct purchase flow via PayPal or primary gateway.',
     enabled: true,
     order: 0,
@@ -23,7 +28,7 @@ export const BUILT_IN_BUTTONS = [
     hoverColor: 'slate-50',
     borderColor: 'slate-200',
     textColor: 'slate-700',
-    action: 'makeOffer', // mapped to internal function
+    action: 'makeOffer', 
     description: 'Opens the Make Offer modal form.',
     enabled: true,
     order: 1,
@@ -39,7 +44,7 @@ export const BUILT_IN_BUTTONS = [
     borderColor: 'green-200',
     textColor: 'green-700',
     hoverColor: 'green-100',
-    action: 'chat', // mapped to internal function
+    action: 'chat', 
     description: 'Opens WhatsApp or primary chat application.',
     enabled: true,
     order: 2,
@@ -55,7 +60,7 @@ export const BUILT_IN_BUTTONS = [
     hoverColor: '#E6C200',
     textColor: 'slate-900',
     borderColor: 'yellow-400/50',
-    action: 'buyViaGoDaddy', // mapped to internal function
+    action: 'buyViaGoDaddy', 
     description: 'Redirects user to GoDaddy for sale page.',
     enabled: true,
     order: 3,
@@ -78,15 +83,40 @@ export const BUILT_IN_BUTTONS = [
 ];
 
 export const AVAILABLE_ICONS = [
-  { value: 'ShoppingCart', label: 'Cart', component: ShoppingCart },
-  { value: 'Send', label: 'Send', component: Send },
-  { value: 'MessageCircle', label: 'Chat', component: MessageCircle },
-  { value: 'ExternalLink', label: 'External Link', component: ExternalLink },
-  { value: 'Globe', label: 'Globe', component: Globe },
+  // 💰 Finance & Sales (المالية والمبيعات)
+  { value: 'BadgeDollarSign', label: 'Premium Sale (Badge)', component: BadgeDollarSign },
+  { value: 'Wallet', label: 'Wallet / Crypto', component: Wallet },
+  { value: 'Banknote', label: 'Cash / Banknote', component: Banknote },
   { value: 'CreditCard', label: 'Credit Card', component: CreditCard },
-  { value: 'Lock', label: 'Lock', component: Lock },
-  { value: 'DollarSign', label: 'Dollar', component: DollarSign },
-  { value: 'Mail', label: 'Mail', component: Mail },
+  { value: 'DollarSign', label: 'Dollar Sign', component: DollarSign },
+  { value: 'Bitcoin', label: 'Web3 / Crypto Domain', component: Bitcoin },
+
+  // 🤝 Negotiation & Communication (التفاوض والتواصل)
+  { value: 'Handshake', label: 'Deal / Handshake', component: Handshake },
+  { value: 'MessagesSquare', label: 'Negotiate (Chat)', component: MessagesSquare },
+  { value: 'Send', label: 'Send Offer', component: Send },
+  { value: 'MessageCircle', label: 'WhatsApp / Chat', component: MessageCircle },
+  { value: 'Mail', label: 'Email', component: Mail },
+
+  // 🛡️ Trust & Security (الثقة والأمان للاستحواذ)
+  { value: 'ShieldCheck', label: 'Secure Transfer (Shield)', component: ShieldCheck },
+  { value: 'LockKeyhole', label: 'Safe / Escrow', component: LockKeyhole },
+  { value: 'Scale', label: 'Legal / Escrow', component: Scale },
+  { value: 'FileBadge', label: 'Certified / Verified', component: FileBadge },
+  { value: 'Lock', label: 'Lock (Standard)', component: Lock },
+
+  // 🚀 Premium, Tech & Assets (التميز والأصول)
+  { value: 'Gem', label: 'Premium / Rare (Gem)', component: Gem },
+  { value: 'TrendingUp', label: 'Investment / Value', component: TrendingUp },
+  { value: 'Briefcase', label: 'Corporate / Business', component: Briefcase },
+  { value: 'Rocket', label: 'Fast Transfer / Launch', component: Rocket },
+  { value: 'Sparkles', label: 'Featured / New', component: Sparkles },
+  { value: 'Zap', label: 'Instant Action', component: Zap },
+  { value: 'Globe', label: 'Web / Domain', component: Globe },
+  
+  // 🔗 General (عام)
+  { value: 'ShoppingCart', label: 'Cart (Standard)', component: ShoppingCart },
+  { value: 'ExternalLink', label: 'External Link', component: ExternalLink },
 ];
 
 export const DEFAULT_PURCHASE_OPTIONS = {
