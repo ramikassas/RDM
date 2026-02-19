@@ -114,11 +114,24 @@ const PurchaseOptionsButtonForm = ({ initialData, onSave, onCancel }) => {
             <SelectTrigger>
               <SelectValue placeholder="Select Style" />
             </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="emerald">Green (Primary)</SelectItem>
-              <SelectItem value="blue">Blue</SelectItem>
+<SelectContent>
+              {/* الألوان الأساسية للإجراءات */}
+              <SelectItem value="emerald">Green (Success / Buy Now)</SelectItem>
+              <SelectItem value="blue">Blue (Primary / Info)</SelectItem>
+              <SelectItem value="red">Red (Urgent / Danger)</SelectItem>
+              <SelectItem value="orange">Orange (Warning / Warm)</SelectItem>
+              
+              {/* ألوان إضافية للتميز */}
+              <SelectItem value="amber">Amber / Yellow</SelectItem>
+              <SelectItem value="indigo">Indigo</SelectItem>
+              <SelectItem value="purple">Purple</SelectItem>
+              <SelectItem value="pink">Pink</SelectItem>
+              
+              {/* الألوان المحايدة والشفافة */}
               <SelectItem value="slate">Dark / Slate</SelectItem>
-              <SelectItem value="outline">Outline (White)</SelectItem>
+              <SelectItem value="gray">Light Gray</SelectItem>
+              <SelectItem value="outline">Outline (Transparent with Border)</SelectItem>
+              <SelectItem value="ghost">Ghost (No Background)</SelectItem>
             </SelectContent>
           </Select>
         </div>
