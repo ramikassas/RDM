@@ -15,7 +15,6 @@ const buttonVariants = cva(
         ghost: 'hover:bg-slate-100 hover:text-slate-900',
         link: 'text-slate-900 underline-offset-4 hover:underline',
         
-        // الألوان المسطحة العادية
         emerald: 'bg-emerald-500 text-white hover:bg-emerald-600',
         blue: 'bg-blue-500 text-white hover:bg-blue-600',
         red: 'bg-red-500 text-white hover:bg-red-600',
@@ -26,20 +25,6 @@ const buttonVariants = cva(
         pink: 'bg-pink-500 text-white hover:bg-pink-600',
         slate: 'bg-slate-700 text-white hover:bg-slate-800',
         gray: 'bg-gray-200 text-gray-900 hover:bg-gray-300',
-
-        // 🌟 الأشكال الاحترافية الجديدة (Premium Styles) 🌟
-        
-        // 1. النمط المتدرج (Gradient Premium)
-        gradient: 'bg-gradient-to-r from-emerald-500 to-teal-600 text-white border-0 shadow-lg shadow-emerald-500/30 hover:shadow-xl hover:shadow-emerald-500/40 hover:-translate-y-0.5 transition-all duration-300',
-        
-        // 2. النمط المضيء (Neon Glow) - ممتاز لنطاقات التقنية والذكاء الاصطناعي
-        neon: 'bg-slate-900 text-emerald-400 border border-emerald-500/50 shadow-[0_0_15px_rgba(16,185,129,0.3)] hover:bg-slate-800 hover:shadow-[0_0_25px_rgba(16,185,129,0.6)] hover:-translate-y-0.5 transition-all duration-300',
-        
-        // 3. النمط ثلاثي الأبعاد (Soft 3D) - يهبط للأسفل عند الضغط عليه
-        '3d': 'bg-blue-600 text-white border-b-[4px] border-blue-800 hover:bg-blue-500 hover:border-blue-700 active:border-b-0 active:translate-y-[4px] transition-all',
-        
-        // 4. النمط الزجاجي الداكن الفاخر (Dark Glassmorphism)
-        glass: 'bg-slate-900/80 backdrop-blur-md border border-slate-700 text-white shadow-xl hover:bg-slate-800/90 hover:shadow-2xl hover:-translate-y-0.5 transition-all duration-300',
       },
       size: {
         default: 'h-11 px-4 py-2',
