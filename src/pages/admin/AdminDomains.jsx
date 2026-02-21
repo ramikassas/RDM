@@ -1,7 +1,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { supabase } from '@/lib/customSupabaseClient';
-import { Plus, Search, Edit, Trash2, CheckSquare, Upload, Star, FileImage as ImageIcon } from 'lucide-react';
+import { Plus, Search, Edit, Trash2, CheckSquare, Upload, Star, FileImage as ImageIcon, CreditCard } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/components/ui/use-toast';
@@ -10,7 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import SEO from '@/components/SEO';
 import { formatDateOnly } from '@/utils/formatDate';
 import DomainLogoUpload from '@/components/admin/DomainLogoUpload';
-import BulkImportWizard from '@/components/admin/bulk-import/BulkImportWizard';
+import PurchaseOptionsTab from '@/components/admin/PurchaseOptions/PurchaseOptionsTab';
 
 const AdminDomains = () => {
   const [domains, setDomains] = useState([]);
@@ -21,6 +21,10 @@ const AdminDomains = () => {
   // Single Domain Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingId, setEditingId] = useState(null);
+  
+  // We keep the full domain object for passing to child components
+  const [currentDomain, setCurrentDomain] = useState(null);
+
   const [formData, setFormData] = useState({
     name: '',
     price: '',
@@ -40,7 +44,8 @@ const AdminDomains = () => {
     technical_specifications: '',
     logo_url: null,
     logo_alt_text: '',
-    logo_uploaded_at: null
+    logo_uploaded_at: null,
+    purchase_options_config: null
   });
 
   // Bulk Import Modal State
@@ -87,7 +92,10 @@ const AdminDomains = () => {
         usp_points: formData.usp_points.split(',').map(s => s.trim()).filter(Boolean),
         logo_url: formData.logo_url,
         logo_alt_text: formData.logo_alt_text,
-        logo_uploaded_at: formData.logo_uploaded_at
+        logo_uploaded_at: formData.logo_uploaded_at,
+        // preserve existing config if we are just editing main fields, 
+        // unless specifically updated by manager (which handles its own saves mostly)
+        purchase_options_config: formData.purchase_options_config
       };
 
       let error;
@@ -128,6 +136,7 @@ const AdminDomains = () => {
   const openModal = (domain = null) => {
     if (domain) {
       setEditingId(domain.id);
+      setCurrentDomain(domain);
       setFormData({
         name: domain.name || '',
         price: domain.price || '',
@@ -147,16 +156,19 @@ const AdminDomains = () => {
         usp_points: (domain.usp_points || []).join(', '),
         logo_url: domain.logo_url || null,
         logo_alt_text: domain.logo_alt_text || '',
-        logo_uploaded_at: domain.logo_uploaded_at || null
+        logo_uploaded_at: domain.logo_uploaded_at || null,
+        purchase_options_config: domain.purchase_options_config || null
       });
     } else {
       setEditingId(null);
+      setCurrentDomain(null);
       setFormData({
         name: '', price: '', status: 'available', featured: false,
         registry: '', transfer_type: '', renewal_price: '', listed_date: '', registration_date: '',
         category: '', tagline: '', description: '', market_rationale: '', technical_specifications: '',
         use_cases: '', usp_points: '',
-        logo_url: null, logo_alt_text: '', logo_uploaded_at: null
+        logo_url: null, logo_alt_text: '', logo_uploaded_at: null,
+        purchase_options_config: null
       });
     }
     setIsModalOpen(true);
@@ -177,6 +189,24 @@ const AdminDomains = () => {
         fetchDomains();
       }
     }
+  };
+  
+  const refreshCurrentDomain = async () => {
+    if (editingId) {
+        const { data } = await supabase.from('domains').select('*').eq('id', editingId).single();
+        if (data) {
+            setCurrentDomain(data);
+            setFormData(prev => ({
+                ...prev,
+                purchase_options_config: data.purchase_options_config
+            }));
+        }
+    }
+    fetchDomains(); // refresh list
+  };
+
+  const closeBulkImport = () => {
+    setIsBulkImportOpen(false);
   };
 
   const filteredDomains = domains.filter(d => d.name.toLowerCase().includes(searchTerm.toLowerCase()));
@@ -260,18 +290,21 @@ const AdminDomains = () => {
 
         {/* Edit/Create Modal */}
         <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-          <DialogContent className="sm:max-w-3xl max-h-[90vh] overflow-y-auto">
+          <DialogContent className="sm:max-w-4xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>{editingId ? 'Edit Domain' : 'Add New Domain'}</DialogTitle>
             </DialogHeader>
             
             <Tabs defaultValue="essential" className="w-full">
-              <TabsList className="grid w-full grid-cols-5">
+              <TabsList className="grid w-full grid-cols-6">
                 <TabsTrigger value="essential">Info</TabsTrigger>
                 <TabsTrigger value="registry">Registry</TabsTrigger>
                 <TabsTrigger value="marketing">Marketing</TabsTrigger>
                 <TabsTrigger value="features">Features</TabsTrigger>
                 <TabsTrigger value="logo">Logo</TabsTrigger>
+                <TabsTrigger value="purchase_options">
+                   <CreditCard className="w-3 h-3 mr-1" /> Buttons
+                </TabsTrigger>
               </TabsList>
 
               <div className="py-4">
@@ -411,6 +444,15 @@ const AdminDomains = () => {
                      </div>
                    )}
                 </TabsContent>
+
+                <TabsContent value="purchase_options">
+                    <PurchaseOptionsTab 
+                       domainId={editingId}
+                       domainData={currentDomain}
+                       onRefresh={refreshCurrentDomain}
+                    />
+                </TabsContent>
+
               </div>
             </Tabs>
 
@@ -421,16 +463,14 @@ const AdminDomains = () => {
           </DialogContent>
         </Dialog>
 
-        {/* Bulk Import Wizard Integration */}
-        <BulkImportWizard 
-          isOpen={isBulkImportOpen} 
-          onClose={() => setIsBulkImportOpen(false)}
-          onComplete={() => {
-            setIsBulkImportOpen(false);
-            fetchDomains();
-            toast({ title: 'Success', description: 'Bulk import process completed.' });
-          }}
-        />
+        {/* Bulk Import Modal */}
+        <Dialog open={isBulkImportOpen} onOpenChange={closeBulkImport}>
+          <DialogContent>
+            <DialogTitle>Bulk Import</DialogTitle>
+            <p>Feature currently limited for demo.</p>
+            <Button onClick={closeBulkImport}>Close</Button>
+          </DialogContent>
+        </Dialog>
       </div>
     </>
   );
