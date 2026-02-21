@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { supabase } from '@/lib/customSupabaseClient';
 import { Plus, Search, Edit, Trash2, CheckSquare, Upload, Star, FileImage as ImageIcon, CreditCard } from 'lucide-react';
@@ -11,6 +10,7 @@ import SEO from '@/components/SEO';
 import { formatDateOnly } from '@/utils/formatDate';
 import DomainLogoUpload from '@/components/admin/DomainLogoUpload';
 import PurchaseOptionsTab from '@/components/admin/PurchaseOptions/PurchaseOptionsTab';
+import BulkImportWizard from '@/components/admin/bulk-import/BulkImportWizard';
 
 const AdminDomains = () => {
   const [domains, setDomains] = useState([]);
@@ -203,10 +203,6 @@ const AdminDomains = () => {
         }
     }
     fetchDomains(); // refresh list
-  };
-
-  const closeBulkImport = () => {
-    setIsBulkImportOpen(false);
   };
 
   const filteredDomains = domains.filter(d => d.name.toLowerCase().includes(searchTerm.toLowerCase()));
@@ -463,14 +459,16 @@ const AdminDomains = () => {
           </DialogContent>
         </Dialog>
 
-        {/* Bulk Import Modal */}
-        <Dialog open={isBulkImportOpen} onOpenChange={closeBulkImport}>
-          <DialogContent>
-            <DialogTitle>Bulk Import</DialogTitle>
-            <p>Feature currently limited for demo.</p>
-            <Button onClick={closeBulkImport}>Close</Button>
-          </DialogContent>
-        </Dialog>
+        {/* Bulk Import Wizard Integration */}
+        <BulkImportWizard 
+          isOpen={isBulkImportOpen} 
+          onClose={() => setIsBulkImportOpen(false)}
+          onComplete={() => {
+            setIsBulkImportOpen(false);
+            fetchDomains();
+            toast({ title: 'Success', description: 'Bulk import process completed.' });
+          }}
+        />
       </div>
     </>
   );
