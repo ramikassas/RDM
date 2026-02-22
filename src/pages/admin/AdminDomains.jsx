@@ -70,10 +70,10 @@ const AdminDomains = () => {
     setLoading(false);
   };
 
-  const handleSave = async () => {
+const handleSave = async () => {
     try {
       const payload = {
-        name: formData.name,
+        name: formData.name.toLowerCase(), //
         price: parseFloat(formData.price) || 0,
         status: formData.status,
         featured: formData.featured,
