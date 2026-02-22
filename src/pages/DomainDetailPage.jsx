@@ -337,7 +337,7 @@ const DomainDetailPage = () => {
           ? domain.description 
           : generateAutoDescription(domainName));
 
-  const displayKeywords = domain?.seo?.meta_keywords || [
+const displayKeywords = domain?.seo?.meta_keywords || [
     `buy ${domainName}`,
     `purchase ${domainName}`,
     `${domainName} price`,
@@ -345,9 +345,9 @@ const DomainDetailPage = () => {
     "premium domain purchase"
   ].join(', ');
 
-  const socialUrl = `https://rdm.bz/domain/${domainName}`;
-  const currentUrl = `https://rdm.bz/domain/${domainName}`;
-  
+const socialUrl = `https://rdm.bz/domain/${domainName}`.toLowerCase(); //
+  const currentUrl = `https://rdm.bz/domain/${domainName}`.toLowerCase(); //
+
   let finalImage = "https://rdm.bz/og-image.png";
   if (!isDataLoading && domain) {
       const isFullUrl = domain.logo_url && (domain.logo_url.startsWith('http') || domain.logo_url.startsWith('//'));
