@@ -73,13 +73,13 @@ const DomainDetailPage = () => {
   // Local state for real-time status updates
   const [realtimeStatus, setRealtimeStatus] = useState(null);
 
-  // Fetch Domain Function
+// Fetch Domain Function
   const fetchDomain = useCallback(async () => {
       // Ensure we explicitly fetch purchase_options_config
       const { data: domainData, error: domainError } = await supabase
         .from('domains')
         .select('*, purchase_options_config') 
-        .eq('name', domainName)
+        .ilike('name', domainName) //
         .single();
       
       if (domainError) throw domainError;
