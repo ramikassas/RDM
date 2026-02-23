@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Shield, TrendingUp, Users, Award, Twitter, ArrowRight, Globe, Server } from 'lucide-react';
 import { motion } from 'framer-motion';
@@ -33,7 +32,14 @@ const AboutPage = () => {
       <div className="bg-slate-50 min-h-screen">
         {/* Hero Section */}
         <section className="bg-white border-b border-slate-100">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 md:py-28">
+          {/* تعديل بسيط هنا: حولنا py-20 لـ pt-8 pb-20 عشان نعطي مساحة للـ Breadcrumbs من فوق */}
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-20 md:pt-12 md:pb-28">
+            
+            {/* نقلنا مسار التنقل (Breadcrumbs) لهون */}
+            <div className="mb-12">
+              <Breadcrumbs items={[{ label: 'About Us', path: null }]} />
+            </div>
+
             <div className="max-w-3xl mx-auto text-center">
               <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }}>
                 <h1 className="text-4xl md:text-6xl font-black text-slate-900 mb-6 leading-tight">
@@ -49,7 +55,7 @@ const AboutPage = () => {
         </section>
 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
-          <Breadcrumbs items={[{ label: 'About Us', path: null }]} />
+          {/* تم إزالة مسار التنقل من هنا لأنه أصبح في الأعلى */}
 
           {/* Mission & Values Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-12 lg:gap-20 my-20 items-center">
